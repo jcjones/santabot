@@ -1,0 +1,46 @@
+<nav class="navbar navbar-default" role="navigation">
+  <div class="container-fluid">
+    <!-- Brand and toggle get grouped for better mobile display -->
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="/">SantaBot of Awesome</a>
+    </div>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+
+      <ul class="nav navbar-nav">
+        <li><a href="#">Link</a></li>
+
+        {% if users.is_current_user_admin() %}
+        <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown">Admin <b class="caret"></b></a>
+          <ul class="dropdown-menu">
+            <li><a href="/admin/list">List</a></li>
+            <li class="divider"></li>
+            <li><a href="/admin/initialize">Initialize</a></li>
+          </ul>
+        </li>
+
+        {% endif %}
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        {% if users.get_current_user() %}
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">{{ users.get_current_user().nickname() }} <b class="caret"></b></a>
+            <ul class="dropdown-menu">
+              <li><a href="{{users.create_logout_url('/')}}">sign out</a></li>
+            </ul>
+          </li>
+        {% else %}
+          <li><a href="{{users.create_login_url('/')}}">Sign In</a></li>
+        {% endif %}
+      </ul>
+    </div><!-- /.navbar-collapse -->
+  </div><!-- /.container-fluid -->
+</nav>

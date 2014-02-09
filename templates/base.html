@@ -1,0 +1,38 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    {% block head %}
+    <!-- Bootstrap core CSS -->
+    <link href="/static/css/bootstrap.css" rel="stylesheet">
+    <!-- Our CSS -->
+    <link href="/static/css/santabot.css" rel="stylesheet">
+    
+    <title>{% block title %}{% endblock %} - SantaBot of Awesome</title>
+    {% endblock %}
+</head>
+<body>
+
+    {% include "navbar.html" %}
+
+    <div class="container container-full">
+        {% block content %}{% endblock %}
+    </div>
+
+    <footer class="footer">
+        <div class="row">
+            <div class="col-md-offset-8 col-md-4">
+                {% block footer %}
+                &copy; Copyright 2014 by Pug</a>.
+                {% endblock %}
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="/static/js/jquery-2.0.3.min.js"></script>
+    <script src="/static/js/bootstrap.min.js"></script>
+
+</body>
+</html>

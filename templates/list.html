@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}People{% endblock %}
+{% block head %}
+    {{ super() }}
+    <style type="text/css">
+        .important { color: #336699; }
+    </style>
+{% endblock %}
+{% block content %}
+
+<div class="row block-row">
+	{% for group in listObj %}
+	<div class="col-md-12">
+		<h1>{{group.name}}</h1>
+
+			<ol>
+			{% for person in group.people %}
+			  <li>{{person.name}} - {{person.email}}</li>
+			{% endfor %}
+			</ol>
+
+	</div>
+	{% endfor %}
+</div>
+{% endblock %}

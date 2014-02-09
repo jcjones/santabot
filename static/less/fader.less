@@ -1,0 +1,22 @@
+@import "lesshat-prefixed.less";
+@import "lesshat.less";
+
+.cross-fade-container {
+    position: relative;
+}
+.fader {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: none;
+}
+.show {
+    display: block;
+    .transition(opacity 250ms ease);
+}
+.fadeOut {
+    opacity: 0;
+}
+.cross-fade-target {
+    display: block;
+}

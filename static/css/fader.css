@@ -1,0 +1,1 @@
+.cross-fade-container{position:relative}.fader{position:absolute;top:0;left:0;display:none}.show{display:block;-webkit-transition:opacity 250ms ease;-moz-transition:opacity 250ms ease;-o-transition:opacity 250ms ease;transition:opacity 250ms ease}.fadeOut{opacity:0}.cross-fade-target{display:block}
