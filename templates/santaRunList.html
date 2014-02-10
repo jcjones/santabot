@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Santa Runs{% endblock %}
+{% block head %}
+{{ super() }}
+<style type="text/css">
+.important { color: #336699; }
+</style>
+{% endblock %}
+{% block content %}
+
+<div class="row block-row">
+    <div class="col-md-12">
+        <h1>
+            {{group.name}}
+        </h1>
+
+        <table class="table table-striped">
+            <tr>
+                <th>Date</th>
+                <th>ID</th>
+            </tr>
+
+            {% for run in runs %}
+            <tr>
+                <td>{{run.date}}</td>
+                <td><a href="/admin/listRunDetails/{{run.key.urlsafe()}}">{{run.key.urlsafe()}}</a></td>
+            </tr>
+            {% endfor %}
+
+        </table>
+
+    </div>
+</div>
+{% endblock %}

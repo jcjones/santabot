@@ -15,13 +15,13 @@
     <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
 
       <ul class="nav navbar-nav">
-        <li><a href="#">Link</a></li>
+        <li><a href="/test">sendEmail</a></li>
 
         {% if users.is_current_user_admin() %}
         <li class="dropdown">
           <a href="#" class="dropdown-toggle" data-toggle="dropdown">Admin <b class="caret"></b></a>
           <ul class="dropdown-menu">
-            <li><a href="/admin/list">List</a></li>
+            <li><a href="/admin/listGroups">List Groups</a></li>            
             <li class="divider"></li>
             <li><a href="/admin/initialize">Initialize</a></li>
           </ul>

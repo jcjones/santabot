@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Santa Run Details{% endblock %}
+{% block head %}
+{{ super() }}
+<style type="text/css">
+.important { color: #336699; }
+</style>
+{% endblock %}
+{% block content %}
+
+<div class="row block-row">
+    <div class="col-md-12">
+        <h1>
+            {{runObj.group.name}} <small>{{runObj.date}}</small>
+        </h1>
+
+        <table class="table table-striped">
+            <tr>
+                <th>Source</th>
+                <th>Target</th>
+                <th>Verify Time</th>
+                <th>Key</th>
+            </tr>
+
+            {% for pair in runObj.pairs %}
+            <tr>
+                <td>{{pair.source}}</td>
+                <td>{{pair.target}}</td>
+                <td>{{pair.verifyTime}}</td>
+                <td>{{pair.key}}</td>
+            </tr>
+            {% endfor %}
+
+        </table>
+
+    </div>
+</div>
+{% endblock %}

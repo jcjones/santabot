@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}People{% endblock %}
+{% block head %}
+    {{ super() }}
+    <style type="text/css">
+        .important { color: #336699; }
+    </style>
+{% endblock %}
+{% block content %}
+
+<div class="row block-row">
+	{% for group in listObj %}
+	<div class="col-md-12">
+		<h1>
+			{{group.name}}
+			<small>
+				<a href="/admin/run/{{group.name}}"><button type="button" class="btn btn-warning">Run</button></a>
+				<a href="/admin/listRuns/{{group.name}}"><button type="button" class="btn btn-default">List</button></a>
+			</small>
+		</h1>
+
+		<table class="table table-striped">
+
+		{% for person in group.people %}
+		  <tr>
+		  	<td>{{person.name}}</td>
+		  	<td>{{person.email}}</td>
+		  </tr>
+		{% endfor %}
+
+		</table>
+
+	</div>
+	{% endfor %}
+</div>
+{% endblock %}
