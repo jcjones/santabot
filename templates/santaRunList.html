@@ -23,7 +23,8 @@
             {% for run in runs %}
             <tr>
                 <td>{{run.date}}</td>
-                <td><a href="/admin/listRunDetails/{{run.key.urlsafe()}}">{{run.key.urlsafe()}}</a></td>
+                <td><a href="/admin/listRunDetails/{{run.key.urlsafe()}}">Details</a></td>
+                <td><a class="emailSend" id="{{run.key.urlsafe()}}" href="#">Send email</button></td>
             </tr>
             {% endfor %}
 
@@ -31,4 +32,18 @@
 
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function(){
+    $(".emailSend").click(function(obj){
+        var runKey = $(this).attr("id");
+        $.post("/admin/listRunDetails/"+runKey, function(data){
+            alert("Done!")
+        });
+    });
+});
+
+</script>
 {% endblock %}

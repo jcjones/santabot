@@ -2,7 +2,7 @@
 
 # Import the Flask Framework
 from flask import Flask
-from flask import render_template, redirect, url_for
+from flask import render_template, redirect, url_for, request
 app = Flask(__name__)
 # Note: We don't need to call run() since our application is embedded within
 # the App Engine WSGI application server.
@@ -56,26 +56,37 @@ peopleKey = ndb.Key("People", "people")
 groupsKey = ndb.Key("Groups", "groups")
 runsKey = ndb.Key("Runs", "runs")
 
-currentUser = users.get_current_user()
+def getSantaPersonForEmail(email=None):
+    for sp in SantaPerson.query(SantaPerson.email == email):
+        return sp
+    return None
+
+def getCurrentUserRecord():
+    if users.get_current_user() and users.get_current_user().email():
+        return getSantaPersonForEmail(email=users.get_current_user().email())
+    return None
 
 @app.route('/')
 def mainPage():
     """Return a friendly HTTP greeting."""
 
-    return render_template('index.html', users=users)
+
+    return render_template('index.html', users=users, userRecord=getCurrentUserRecord())
 
 @app.route('/test')
-def sendEmail():
+def usefulTestMethod():
+
+
     
-    return redirect(url_for('mainPage'))
+    return render_template('index.html', users=users, userRecord=getCurrentUserRecord(), alertMessage="n")
 
 
     # santa_pair.put()
 
-def bob():
-    message = mail.EmailMessage(sender="The Santabot of Awesome <santa@secretsantabotwin.appspot.com>")
-    message.subject = "{sourceName} 's Secret Santa Result".format(sourceName=source.name)
-    message.to = "{sourceName} <{sourceEmail}>".format(sourceName=source.name, sourceEmail=source.email)
+def email_send(sourceUser=None, targetUser=None, pairSecret=None):
+    message = mail.EmailMessage(sender="The Santabot of Win <santa@secretsantabotwin.appspot.com>")
+    message.subject = "{sourceName}'s Secret Santa Result".format(sourceName=sourceUser.name)
+    message.to = "{sourceName} <{sourceEmail}>".format(sourceName=sourceUser.name, sourceEmail=sourceUser.email)
     message.body = """
     Dear {sourceName}:
 
@@ -88,13 +99,13 @@ def bob():
     where ANYTHING CAN HAPPEN. LA LA LA LA (FA LA LA)
 
     The SantaBot
-    """.format(targetName=target.name, sourceName=source.name, mainPage=url_for('email_acknowledge', key=source.key, _external=True))
+    """.format(targetName=targetUser.name, sourceName=sourceUser.name, mainPage=url_for('email_acknowledge', key=pairSecret, _external=True))
 
     message.send()
 
     logging.info(message.body)
 
-    return redirect(url_for('mainPage'))
+    
 
 @app.route("/email/acknowledge/<key>")
 def email_acknowledge(key):
@@ -105,11 +116,8 @@ def email_acknowledge(key):
         logging.info("Run is {}".format(run))
         for pair in run.pairs:
             logging.info("   Pair is {}".format(pair))
-            if key == pair.one.key:
-                found = pair.one
-                break
-            elif key == pair.two.key:
-                found = pair.two
+            if key == pair.key:
+                found = pair
                 break
 
         if found:
@@ -122,9 +130,9 @@ def email_acknowledge(key):
     logging.info("Found: {} {}".format(found, key))
     
     if successful:
-        return "OK " + key
+        return render_template('index.html', users=users, userRecord=getCurrentUserRecord(), alertMessage="Thanks for verifying!")
     else:
-        return "Error, already used."
+        return render_template('index.html', users=users, userRecord=getCurrentUserRecord(), alertMessage="Yup, you already confirmed.")
 
 @app.route('/admin/listGroups')
 def admin_list():
@@ -171,7 +179,7 @@ def admin_initialize():
     jones = SantaGroup(parent=groupsKey, name="Jones Family Secret Santa", emails=[jcj.email, kpj.email, ccj.email, aaj.email])
     jones.put()
 
-    return render_template('index.html', users=users)
+    return render_template('index.html', users=users, alertMessage="Initialized Database")
 
 @app.route('/admin/run/<groupName>')
 def admin_run(groupName):
@@ -228,17 +236,29 @@ def admin_run(groupName):
     runKey = runObj.put()
     return redirect(url_for('admin_list_run_details', runId=runKey.urlsafe()))
 
+@app.route('/admin/listRunDetails/<runId>', methods=['POST'])
+def admin_list_email_run_messages(runId):
+    runObj = ndb.Key(urlsafe=runId).get()
+    logging.info("Run ID: {} run {}".format(runId, runObj))
+    alertMessage = None
+
+    for pair in runObj.pairs:
+        logging.info("PAIR: " + str(pair))
+        source = getSantaPersonForEmail(pair.source)
+        target = getSantaPersonForEmail(pair.target)
+
+        email_send(sourceUser=source, targetUser=target, pairSecret=pair.key)
+    return ""
+
 @app.route('/admin/listRunDetails/<runId>')
 def admin_list_run_details(runId):
-    run = ndb.Key(urlsafe=runId).get()
-    logging.info("Run ID: {} run {}".format(runId, run))
-
-    return render_template('santaRunDetails.html', users=users, runObj=run)
+    runObj = ndb.Key(urlsafe=runId).get()
+    return render_template('santaRunDetails.html', users=users, runObj=runObj)
 
 @app.route('/admin/listRuns/<groupName>')
 def admin_list_runs(groupName):
     group = SantaGroup.query(SantaGroup.name==groupName).get()
-    runs = SantaRun.query(SantaRun.group.name==groupName)
+    runs = SantaRun.query(SantaRun.group.name==groupName).order(SantaRun.date)
 
     return render_template('santaRunList.html', users=users, group=group, runs=runs)
 

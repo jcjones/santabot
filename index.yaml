@@ -15,3 +15,8 @@ indexes:
   properties:
   - name: date
     direction: desc
+
+- kind: SantaRun
+  properties:
+  - name: group.name
+  - name: date

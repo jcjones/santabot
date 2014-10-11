@@ -15,6 +15,13 @@
     {% include "navbar.html" %}
 
     <div class="container container-full">
+        {% if alertMessage %}    
+        <div class="alert alert-warning alert-dismissable">
+            <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+            {{alertMessage}}
+        </div>
+        {% endif %}
+
         {% block content %}{% endblock %}
     </div>
 
@@ -33,6 +40,8 @@
     <!-- Placed at the end of the document so the pages load faster -->
     <script src="/static/js/jquery-2.0.3.min.js"></script>
     <script src="/static/js/bootstrap.min.js"></script>
+
+    {% block scripts %}{% endblock %}
 
 </body>
 </html>
