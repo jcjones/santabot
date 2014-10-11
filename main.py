@@ -66,12 +66,30 @@ def getCurrentUserRecord():
         return getSantaPersonForEmail(email=users.get_current_user().email())
     return None
 
+def getLatestRun(groupObj=None):
+    logging.info("Searching for latest run in group %s", groupObj.name)
+    for run in SantaRun.query(SantaRun.group.name==groupObj.name).order(-SantaRun.date):
+        print(run)
+    return None
+
+
 @app.route('/')
 def mainPage():
     """Return a friendly HTTP greeting."""
 
+    record = getCurrentUserRecord()
 
-    return render_template('index.html', users=users, userRecord=getCurrentUserRecord())
+    memberGroups = []
+    logging.warn("record: %s", str(record) )
+    if record:
+        # Get all santa groups the current user is in
+        for group in SantaGroup.query(SantaGroup.emails == record.email):
+            group.latestRun = getLatestRun(groupObj=group)
+            memberGroups.append(group)
+            logging.warn("Group: %s", str(group) )
+
+
+    return render_template('index.html', users=users, userRecord=record, memberGroups=memberGroups)
 
 @app.route('/test')
 def usefulTestMethod():
@@ -266,4 +284,4 @@ def admin_list_runs(groupName):
 @app.errorhandler(404)
 def error_404(e):
     """Return a custom 404 error."""
-    return 'Sorry, Nothing at this URL.', 404
+    return render_template('404.html', users=users)

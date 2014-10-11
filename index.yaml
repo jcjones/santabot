@@ -20,3 +20,9 @@ indexes:
   properties:
   - name: group.name
   - name: date
+
+- kind: SantaRun
+  properties:
+  - name: group.name
+  - name: date
+    direction: desc
