@@ -18,11 +18,23 @@ indexes:
 
 - kind: SantaRun
   properties:
+  - name: group
+  - name: date
+    direction: desc
+
+- kind: SantaRun
+  properties:
   - name: group.name
   - name: date
 
 - kind: SantaRun
   properties:
   - name: group.name
+  - name: date
+    direction: desc
+
+- kind: SantaRun
+  ancestor: yes
+  properties:
   - name: date
     direction: desc

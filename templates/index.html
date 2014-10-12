@@ -8,9 +8,7 @@
 {% endblock %}
 {% block content %}
     
-    <h1>The SantaBot of Awesome</h1>
-
-    
+    <h1>The SantaBot of Awesome</h1>    
 
 	<p class="lead">
 		This website exists to provide Secret Santa Services to a select group of super special somebodies.
@@ -19,6 +17,22 @@
     {% if userRecord %}
     <p>
     	Welcome, {{ userRecord.name }}.
+
+        {% if memberGroups %}
+            <p>You're a member of:
+                <ul>
+            {% for mg in memberGroups %}
+                <li>{{mg.group.name}}
+                {% if mg.pair %}
+                    and have {{mg.pair.target}}
+                {% endif %}
+                </li>
+            {% endfor %}
+            </ul>
+            </p>
+        {% else %}
+            <p>You are not currently part of any groups.</p>
+        {% endif %}
     </p>
     {% else %}
     <p>

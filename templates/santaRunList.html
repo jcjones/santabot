@@ -17,14 +17,16 @@
         <table class="table table-striped">
             <tr>
                 <th>Date</th>
-                <th>ID</th>
+                <th>Options</th>
             </tr>
 
             {% for run in runs %}
             <tr>
                 <td>{{run.date}}</td>
-                <td><a href="/admin/listRunDetails/{{run.key.urlsafe()}}">Details</a></td>
-                <td><a class="emailSend" id="{{run.key.urlsafe()}}" href="#">Send email</button></td>
+                <td>
+                    <a class="btn btn-sm btn-info" role="button" href="/admin/listRunDetails/{{run.key.urlsafe()}}">Details</a>
+                    <a class="btn btn-sm btn-danger emailSend" role="button" id="{{run.key.urlsafe()}}" href="#">Send email</button>
+                </td>
             </tr>
             {% endfor %}
 

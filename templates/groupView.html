@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Group{% endblock %}
+{% block head %}
+    {{ super() }}
+    <style type="text/css">
+        .important { color: #336699; }
+    </style>
+{% endblock %}
+{% block content %}
+
+<h2>{{group.name}}</h2>
+
+{% if group.registering %}
+	{% if not joined %}
+	<p>You are not currently registered for this group. If you would like to join, <a href="#">click here</a>.</p>
+	{% else %}
+	<p>Alright! You're all signed up. We're waiting on the rest of the crew to sign up, and then you can fill in your preferences.</p>
+	{% endif %}
+{% else %}
+	{% if target %}
+		<p>You are the Secret Ssanta for <strong>{{target}}</strong></p>!</p>
+	{% else %}
+		<p>Welcome back. We need you to write your list for your Santa. Also, you can specify up to two people as folks whom you do <strong>not</strong> want to be Santa for.</p>
+
+      	<label for="message">Write a message to your Secret Santa about how good you've been and what you want.</label>
+		<textarea id="message" class="form-control" rows="3">Message for Santa</textarea>
+
+		<label for="prohibited">Who would you rather not be Santa for? (Choose up to two)</label>
+		<div id="prohibited" class="form-group">
+			{% for person in others %}
+	      	<div class="checkbox">
+			  <label>
+			    <input type="checkbox" value="{{person.id}}" checked>
+			    {{person.firstName}} {{person.lastName}}
+			  </label>
+			</div>
+			{% endfor %}
+		</div>
+
+	    <button id="ready" type="submit" class="btn btn-primary">I'm ready</button>
+
+	{% endif %}
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function(){
+    $("#message").click(function(obj){
+    	if ($(this).attr("reset")) {
+    		return;
+    	}
+        $(this).val("");
+        $(this).attr("reset", true);
+    });
+    $("#ready").click(function(){
+    	// Verify no more than two selected
+
+    	$("#message").val();
+
+    });
+});
+
+</script>
+{% endblock %}

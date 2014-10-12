@@ -2,7 +2,7 @@
 
 # Import the Flask Framework
 from flask import Flask
-from flask import render_template, redirect, url_for, request
+from flask import render_template, redirect, url_for, request, abort
 app = Flask(__name__)
 # Note: We don't need to call run() since our application is embedded within
 # the App Engine WSGI application server.
@@ -21,18 +21,12 @@ class SantaPerson(ndb.Model):
     """ Describes a partipciant in the Secret Santa """
     email = ndb.StringProperty()
     name = ndb.StringProperty()
+    createDate = ndb.DateTimeProperty(auto_now_add=True)
     user = ndb.UserProperty()
     prohibitedEmails = ndb.TextProperty()
 
-
-class SantaGroup(ndb.Model):
-    """ Models a group of secret santa participants """
-    name = ndb.StringProperty()
-    emails = ndb.StringProperty(repeated=True)
-
 class SantaPairing(ndb.Model):
     """ Represents a pair of partipciants in a Secret Santa run. """    
-    date = ndb.DateTimeProperty(auto_now_add=True)
     source = ndb.StringProperty()
     target = ndb.StringProperty()
     verifyTime = ndb.DateTimeProperty()
@@ -44,34 +38,34 @@ class SantaPairing(ndb.Model):
     def verify(self):
         self.verifyTime = datetime.datetime.now()
 
+class SantaGroup(ndb.Model):
+    """ Models a group of secret santa participants """
+    name = ndb.StringProperty()
+    registering = ndb.BooleanProperty()
+    createDate = ndb.DateTimeProperty(auto_now_add=True)
+    runDate = ndb.DateTimeProperty()
+    pairs = ndb.KeyProperty(kind=SantaPairing, repeated=True)
 
-class SantaRun(ndb.Model):
-    """ A group of santa runs """
-    date = ndb.DateTimeProperty(auto_now_add=True)
-    group = ndb.StructuredProperty(SantaGroup)
-    pairs = ndb.StructuredProperty(SantaPairing, repeated=True)
+class SantaRegistration(ndb.Model):
+    """ Mapping, registering a Person for a Group """
+    person = ndb.KeyProperty(kind=SantaPerson)
+    group = ndb.KeyProperty(kind=SantaGroup)
+    createDate = ndb.DateTimeProperty(auto_now_add=True)
+    completionDate = ndb.DateTimeProperty()
+    prohibitedPeople = ndb.KeyProperty(kind=SantaPerson, repeated=True)
+    shoppingAdvice = ndb.BlobProperty()
 
-
+# Top level keys for the datastore
 peopleKey = ndb.Key("People", "people")
 groupsKey = ndb.Key("Groups", "groups")
-runsKey = ndb.Key("Runs", "runs")
 
 def getSantaPersonForEmail(email=None):
-    for sp in SantaPerson.query(SantaPerson.email == email):
-        return sp
-    return None
+    return SantaPerson.query(SantaPerson.email == email).get()
 
 def getCurrentUserRecord():
     if users.get_current_user() and users.get_current_user().email():
         return getSantaPersonForEmail(email=users.get_current_user().email())
     return None
-
-def getLatestRun(groupObj=None):
-    logging.info("Searching for latest run in group %s", groupObj.name)
-    for run in SantaRun.query(SantaRun.group.name==groupObj.name).order(-SantaRun.date):
-        print(run)
-    return None
-
 
 @app.route('/')
 def mainPage():
@@ -83,11 +77,10 @@ def mainPage():
     logging.warn("record: %s", str(record) )
     if record:
         # Get all santa groups the current user is in
-        for group in SantaGroup.query(SantaGroup.emails == record.email):
-            group.latestRun = getLatestRun(groupObj=group)
-            memberGroups.append(group)
-            logging.warn("Group: %s", str(group) )
-
+        for reg in SantaRegistration.query(SantaRegistration.person == record.key):
+            group = reg.group.get()
+            memberGroups.append({"group":group, "pair":None})
+            logging.warn("Group: %s %s", str(group), reg )
 
     return render_template('index.html', users=users, userRecord=record, memberGroups=memberGroups)
 
@@ -123,7 +116,21 @@ def email_send(sourceUser=None, targetUser=None, pairSecret=None):
 
     logging.info(message.body)
 
-    
+@app.route('/group/<groupName>')
+def view_group(groupName):
+    grpObj = SantaGroup.query(SantaGroup.name==groupName).get()
+    if grpObj:
+
+        target = None
+        others = []
+        joined = True
+
+        return render_template('groupView.html', users=users, userRecord=getCurrentUserRecord(), group=grpObj, joined=joined, target=target, others=others)
+    abort(404)
+
+@app.route('/group/<groupName>', methods='POST')
+def register_group(groupName):
+    pass
 
 @app.route("/email/acknowledge/<key>")
 def email_acknowledge(key):
@@ -171,6 +178,12 @@ def admin_list():
 
     logging.info("Structure: {}".format(structure))
     return render_template('listGroups.html', users=users, listObj=structure)
+
+@app.route('/admin/group/new/<groupName>')
+def admin_new_group(groupName):
+    grpObj = SantaGroup(name=groupName, registering=True)
+    grpObj.put()
+    return redirect(url_for('view_group', groupName=groupName))
 
 @app.route('/admin/initialize')
 def admin_initialize():
@@ -239,7 +252,8 @@ def admin_run(groupName):
                 stillTrying = True
                 break
 
-    runObj = SantaRun(parent=runsKey, group=group)
+    runObj = SantaRun(parent=runsKey, group=group.key)
+    runObj.put()
 
     keyField = string.lowercase+string.digits
     
@@ -248,11 +262,10 @@ def admin_run(groupName):
 
         keyString = ''.join(random.sample(keyField, 32))        
 
-        santa_pair = SantaPairing(source=sources[i].email, target=targets[i].email, key=keyString)
-        runObj.pairs.append(santa_pair)
+        santa_pair = SantaPairing(parent=runObj.key, source=sources[i].email, target=targets[i].email, key=keyString)
+        santa_pair.put()
 
-    runKey = runObj.put()
-    return redirect(url_for('admin_list_run_details', runId=runKey.urlsafe()))
+    return redirect(url_for('admin_list_run_details', runId=runObj.key.urlsafe()))
 
 @app.route('/admin/listRunDetails/<runId>', methods=['POST'])
 def admin_list_email_run_messages(runId):
@@ -260,7 +273,8 @@ def admin_list_email_run_messages(runId):
     logging.info("Run ID: {} run {}".format(runId, runObj))
     alertMessage = None
 
-    for pair in runObj.pairs:
+    for pair in SantaPairing.query(ancestor=runObj.key):
+
         logging.info("PAIR: " + str(pair))
         source = getSantaPersonForEmail(pair.source)
         target = getSantaPersonForEmail(pair.target)
@@ -271,14 +285,23 @@ def admin_list_email_run_messages(runId):
 @app.route('/admin/listRunDetails/<runId>')
 def admin_list_run_details(runId):
     runObj = ndb.Key(urlsafe=runId).get()
-    return render_template('santaRunDetails.html', users=users, runObj=runObj)
+    
+    groupObj = runObj.group.get()
+    pairs = SantaPairing.query(ancestor=runObj.key)
+
+    return render_template('santaRunDetails.html', users=users, runObj=runObj, pairsList=pairs, groupObj=groupObj)
 
 @app.route('/admin/listRuns/<groupName>')
 def admin_list_runs(groupName):
-    group = SantaGroup.query(SantaGroup.name==groupName).get()
-    runs = SantaRun.query(SantaRun.group.name==groupName).order(SantaRun.date)
+    groupObj = SantaGroup.query(SantaGroup.name==groupName).get()
 
-    return render_template('santaRunList.html', users=users, group=group, runs=runs)
+    logging.info("groupObj Obj: %s", groupObj)
+
+    runList = SantaRun.query(SantaRun.group==groupObj.key).order(-SantaRun.date)
+
+    logging.info("runList Obj: %s", runList)
+
+    return render_template('santaRunList.html', users=users, group=groupObj, runs=runList)
 
 
 @app.errorhandler(404)

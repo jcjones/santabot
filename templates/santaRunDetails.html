@@ -11,7 +11,7 @@
 <div class="row block-row">
     <div class="col-md-12">
         <h1>
-            {{runObj.group.name}} <small>{{runObj.date}}</small>
+            {{groupObj.name}} <small>{{runObj.date}}</small>
         </h1>
 
         <table class="table table-striped">
@@ -22,7 +22,7 @@
                 <th>Key</th>
             </tr>
 
-            {% for pair in runObj.pairs %}
+            {% for pair in pairsList %}
             <tr>
                 <td>{{pair.source}}</td>
                 <td>{{pair.target}}</td>
