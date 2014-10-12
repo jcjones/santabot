@@ -12,33 +12,39 @@
 
 {% if group.registering %}
 	{% if not joined %}
-	<p>You are not currently registered for this group. If you would like to join, <a href="#">click here</a>.</p>
+	<p>You are not currently registered for this group. If you would like to join, <a href="/group/{{group.name}}/join">click here</a>.</p>
 	{% else %}
 	<p>Alright! You're all signed up. We're waiting on the rest of the crew to sign up, and then you can fill in your preferences.</p>
 	{% endif %}
 {% else %}
-	{% if target %}
-		<p>You are the Secret Ssanta for <strong>{{target}}</strong></p>!</p>
+	{% if not joined %}
+		<p>I'm sorry, registration for this group is closed.</p>
 	{% else %}
-		<p>Welcome back. We need you to write your list for your Santa. Also, you can specify up to two people as folks whom you do <strong>not</strong> want to be Santa for.</p>
+		{% if target %}
+			<p>You are the Secret Ssanta for <strong>{{target}}</strong></p>!</p>
+		{% else %}
+			
+			<p>Welcome back. We need you to write your list for your Santa. Also, you can specify up to two people as folks whom you do <strong>not</strong> want to be Santa for.</p>
 
-      	<label for="message">Write a message to your Secret Santa about how good you've been and what you want.</label>
-		<textarea id="message" class="form-control" rows="3">Message for Santa</textarea>
-
-		<label for="prohibited">Who would you rather not be Santa for? (Choose up to two)</label>
-		<div id="prohibited" class="form-group">
-			{% for person in others %}
-	      	<div class="checkbox">
-			  <label>
-			    <input type="checkbox" value="{{person.id}}" checked>
-			    {{person.firstName}} {{person.lastName}}
-			  </label>
+			<div class="form-group" id="messageBlock">
+		      	<label for="message">Write a message to your Secret Santa about how good you've been and what you want.</label>
+				<textarea id="message" class="form-control" rows="3">Message for Santa</textarea>
 			</div>
-			{% endfor %}
-		</div>
 
-	    <button id="ready" type="submit" class="btn btn-primary">I'm ready</button>
+			<label for="prohibited">Who do you want to be Santa for? You may uncheck up to two people. The elves won't tell.</label>
+			<div id="prohibited" class="form-group">
+				{% for person in others %}
+		      	<div class="checkbox">
+				  <label>
+				    <input class="prohibited" type="checkbox" value="{{person.key.urlsafe()}}" checked>
+				    {{person.name}}
+				  </label>
+				</div>
+				{% endfor %}
+			</div>
 
+		    <button id="ready" type="submit" class="btn btn-primary">I'm ready</button>
+		{% endif %}
 	{% endif %}
 {% endif %}
 
@@ -54,10 +60,50 @@ $(document).ready(function(){
         $(this).val("");
         $(this).attr("reset", true);
     });
+
     $("#ready").click(function(){
     	// Verify no more than two selected
+    	unchecked = []
+    	$(".prohibited:checkbox").each(function(){
+    		unchecked.push($(this).val())
+    	});
 
-    	$("#message").val();
+		$(".prohibited:checkbox:checked").each(function(){
+			var idx = unchecked.indexOf($(this).val());
+		    if (idx !== -1) {
+		        unchecked.splice(idx, 1);
+		    }
+    	});
+    	
+		if (unchecked.length > 2) {
+			$("#prohibited").addClass("has-error");
+			return;
+		} else {
+			$("#prohibited").removeClass("has-error");
+		}
+
+		// Verify the message got set
+		if (! $("#message").attr("reset")) {
+			$("#messageBlock").addClass("has-error");
+			return;
+		} else {
+			$("#messageBlock").removeClass("has-error");
+		}
+
+    	// Package up the data
+    	data = {}
+
+    	data["message"] = $("#message").val();
+    	if (unchecked.length > 0) {
+    		data["unchecked0"] = unchecked[0];
+    	}
+    	if (unchecked.length > 1) {
+    		data["unchecked1"] = unchecked[1];
+    	}
+
+    	$.post("/group/{{group.name}}/ready", data, function(){
+    		window.location.replace("/");
+    	});
 
     });
 });

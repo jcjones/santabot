@@ -2,8 +2,9 @@
 
 # Import the Flask Framework
 from flask import Flask
-from flask import render_template, redirect, url_for, request, abort
+from flask import render_template, redirect, url_for, request, abort, flash
 app = Flask(__name__)
+app.secret_key = 'squirrel'
 # Note: We don't need to call run() since our application is embedded within
 # the App Engine WSGI application server.
 
@@ -23,14 +24,13 @@ class SantaPerson(ndb.Model):
     name = ndb.StringProperty()
     createDate = ndb.DateTimeProperty(auto_now_add=True)
     user = ndb.UserProperty()
-    prohibitedEmails = ndb.TextProperty()
 
 class SantaPairing(ndb.Model):
     """ Represents a pair of partipciants in a Secret Santa run. """    
     source = ndb.StringProperty()
     target = ndb.StringProperty()
     verifyTime = ndb.DateTimeProperty()
-    key = ndb.StringProperty()
+    secret = ndb.StringProperty()
 
     def isVerified(self):
         return self.verifyTime is not None
@@ -72,6 +72,10 @@ def mainPage():
     """Return a friendly HTTP greeting."""
 
     record = getCurrentUserRecord()
+    if not record and users.get_current_user():
+        user = users.get_current_user()
+        record = SantaPerson(user=user, email=user.email(), name=user.nickname())
+        record.put()
 
     memberGroups = []
     logging.warn("record: %s", str(record) )
@@ -87,9 +91,10 @@ def mainPage():
 @app.route('/test')
 def usefulTestMethod():
 
+    flash("OH NO")
 
     
-    return render_template('index.html', users=users, userRecord=getCurrentUserRecord(), alertMessage="n")
+    return render_template('index.html', users=users, userRecord=getCurrentUserRecord())
 
 
     # santa_pair.put()
@@ -118,46 +123,90 @@ def email_send(sourceUser=None, targetUser=None, pairSecret=None):
 
 @app.route('/group/<groupName>')
 def view_group(groupName):
+    userObj = getCurrentUserRecord()
+
+    # if userObj is None:        
+    #     return redirect(users.create_login_url(url_for('view_group', groupName=groupName)))
+
     grpObj = SantaGroup.query(SantaGroup.name==groupName).get()
     if grpObj:
 
         target = None
         others = []
-        joined = True
+        joined = False
+
+        for reg in SantaRegistration.query(SantaRegistration.group == grpObj.key):
+            person = reg.person.get()
+            logging.info("Checking on %s", reg)
+            if person is not getCurrentUserRecord():
+                others.append(person)
+            else:
+                joined = True
+                logging.info("Found myself %s", person)
 
         return render_template('groupView.html', users=users, userRecord=getCurrentUserRecord(), group=grpObj, joined=joined, target=target, others=others)
     abort(404)
 
-@app.route('/group/<groupName>', methods='POST')
-def register_group(groupName):
-    pass
+@app.route('/group/<groupName>/join')
+def join_group(groupName):
+    grpObj = SantaGroup.query(SantaGroup.name==groupName).get()
+    userObj = getCurrentUserRecord()
+
+    if userObj is None:        
+        return redirect(users.create_login_url(url_for('view_group', groupName=groupName)))
+
+    # Dedupe
+    if SantaRegistration.query(SantaRegistration.group == grpObj.key, SantaRegistration.person == userObj.key).get():
+        return redirect(url_for('view_group', groupName=groupName))        
+
+    reg = SantaRegistration(group = grpObj.key, person = userObj.key)    
+    reg.put()
+
+    return redirect(url_for('view_group', groupName=groupName))
+
+@app.route('/group/<groupName>/ready', methods=['POST'])
+def ready_group(groupName):
+    grpObj = SantaGroup.query(SantaGroup.name==groupName).get()
+    userObj = getCurrentUserRecord()
+
+    logging.info("oh %s", request.form)
+    logging.info("MSG %s", request.form['message'])
+
+    if "unchecked0" in request.form:
+        logging.info("CHK0 %s", request.form['unchecked0'])
+    if "unchecked1" in request.form:
+        logging.info("CHK1 %s", request.form['unchecked1'])
+
+    reg = SantaRegistration.query(SantaRegistration.group == grpObj.key, SantaRegistration.person == userObj.key).get()
+    reg.shoppingAdvice = str(request.form['message'])
+    reg.completionDate = datetime.datetime.now()
+    del reg.prohibitedPeople[:]
+    if "unchecked0" in request.form:
+        reg.prohibitedPeople.append(ndb.Key(urlsafe=request.form['unchecked0']))
+    if "unchecked1" in request.form:
+        reg.prohibitedPeople.append(ndb.Key(urlsafe=request.form['unchecked1']))
+    reg.put()
+
+    return "OK"
+
 
 @app.route("/email/acknowledge/<key>")
 def email_acknowledge(key):
     found = None
     successful = False
 
-    for run in SantaRun.query():
-        logging.info("Run is {}".format(run))
-        for pair in run.pairs:
-            logging.info("   Pair is {}".format(pair))
-            if key == pair.key:
-                found = pair
-                break
+    pair = SantaPairing.query(SantaPairing.secret == key).get()
+    pair.verify()
+    pair.put()
 
-        if found:
-            if not found.isVerified():
-                successful = True
-                found.verify()
-                run.put()
-            break
-
-    logging.info("Found: {} {}".format(found, key))
+    logging.info("Found: {} {}".format(pair, key))
     
     if successful:
-        return render_template('index.html', users=users, userRecord=getCurrentUserRecord(), alertMessage="Thanks for verifying!")
+        flash("Thanks for verifying!")
     else:
-        return render_template('index.html', users=users, userRecord=getCurrentUserRecord(), alertMessage="Yup, you already confirmed.")
+        flash("Yup, you already confirmed.")
+
+    return render_template('index.html', users=users, userRecord=getCurrentUserRecord())
 
 @app.route('/admin/listGroups')
 def admin_list():
@@ -185,34 +234,7 @@ def admin_new_group(groupName):
     grpObj.put()
     return redirect(url_for('view_group', groupName=groupName))
 
-@app.route('/admin/initialize')
-def admin_initialize():
-    logging.info("Initializing database...")    
-    # jcj = SantaPerson(parent=peopleKey, email="james.jc.jones@gmail.com", name="J.C. Jones", prohibitedEmails="kpiburnjones@gmail.com")
-    # kpj = SantaPerson(parent=peopleKey, email="kpiburnjones@gmail.com", name="Katie Jones", prohibitedEmails="james.jc.jones@gmail.com")
-    # ccj = SantaPerson(parent=peopleKey, email="wakosama@gmail.com", name="Chris Jones", prohibitedEmails="amyalexanderjones@gmail.com")
-    # aaj = SantaPerson(parent=peopleKey, email="amyalexanderjones@gmail.com", name="Amy Jones", prohibitedEmails="wakosama@gmail.com")
-
-    jcj = SantaPerson(parent=peopleKey, email="pug+jcj@pugsplace.net", name="J.C. Jones", prohibitedEmails="pug+kpj@pugsplace.net;pug+ccj@pugsplace.net")
-    kpj = SantaPerson(parent=peopleKey, email="pug+kpj@pugsplace.net", name="Katie Jones", prohibitedEmails="pug+jcj@pugsplace.net")
-    ccj = SantaPerson(parent=peopleKey, email="pug+ccj@pugsplace.net", name="Chris Jones", prohibitedEmails="pug+aaj@pugsplace.net")
-    aaj = SantaPerson(parent=peopleKey, email="pug+aaj@pugsplace.net", name="Amy Jones", prohibitedEmails="pug+ccj@pugsplace.net")
-
-
-    jcj.put()
-    kpj.put()
-    ccj.put()
-    aaj.put()
-
-    csc = SantaGroup(parent=groupsKey, name="CSC Secret Santa", emails=[jcj.email, kpj.email])
-    csc.put()
-
-    jones = SantaGroup(parent=groupsKey, name="Jones Family Secret Santa", emails=[jcj.email, kpj.email, ccj.email, aaj.email])
-    jones.put()
-
-    return render_template('index.html', users=users, alertMessage="Initialized Database")
-
-@app.route('/admin/run/<groupName>')
+@app.route('/admin/group/<groupName>/run')
 def admin_run(groupName):
     group = SantaGroup.query(SantaGroup.name==groupName).get()
 
@@ -262,7 +284,7 @@ def admin_run(groupName):
 
         keyString = ''.join(random.sample(keyField, 32))        
 
-        santa_pair = SantaPairing(parent=runObj.key, source=sources[i].email, target=targets[i].email, key=keyString)
+        santa_pair = SantaPairing(parent=runObj.key, source=sources[i].email, target=targets[i].email, secret=keyString)
         santa_pair.put()
 
     return redirect(url_for('admin_list_run_details', runId=runObj.key.urlsafe()))
@@ -271,7 +293,6 @@ def admin_run(groupName):
 def admin_list_email_run_messages(runId):
     runObj = ndb.Key(urlsafe=runId).get()
     logging.info("Run ID: {} run {}".format(runId, runObj))
-    alertMessage = None
 
     for pair in SantaPairing.query(ancestor=runObj.key):
 
@@ -291,7 +312,7 @@ def admin_list_run_details(runId):
 
     return render_template('santaRunDetails.html', users=users, runObj=runObj, pairsList=pairs, groupObj=groupObj)
 
-@app.route('/admin/listRuns/<groupName>')
+@app.route('/admin/group/<groupName>/list')
 def admin_list_runs(groupName):
     groupObj = SantaGroup.query(SantaGroup.name==groupName).get()
 

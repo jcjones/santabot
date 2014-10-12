@@ -7,7 +7,7 @@
     <!-- Our CSS -->
     <link href="/static/css/santabot.css" rel="stylesheet">
     
-    <title>{% block title %}{% endblock %} - SantaBot of Awesome</title>
+    <title>{% block title %}{% endblock %} - SantaBot of Win</title>
     {% endblock %}
 </head>
 <body>
@@ -15,12 +15,18 @@
     {% include "navbar.html" %}
 
     <div class="container container-full">
-        {% if alertMessage %}    
-        <div class="alert alert-warning alert-dismissable">
-            <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
-            {{alertMessage}}
-        </div>
-        {% endif %}
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <ul class=flashes>
+            {% for message in messages %}
+            <div class="alert alert-warning alert-dismissable">
+              <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+              {{ message }}
+            </div>
+            {% endfor %}
+            </ul>
+          {% endif %}
+        {% endwith %}
 
         {% block content %}{% endblock %}
     </div>
