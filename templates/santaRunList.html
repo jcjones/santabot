@@ -14,22 +14,42 @@
             {{group.name}}
         </h1>
 
+
+        {% if pairsList %}
+        <table class="table table-striped">
+            <tr>
+                <th>Source</th>
+                <th>Target</th>
+                <th>Verify Time</th>
+                <th>Key</th>
+            </tr>
+
+            {% for pair in pairsList %}
+            <tr>
+                <td>{{pair.source.get().name}}</td>
+                <td>{{pair.target.get().name}}</td>
+                <td>{{pair.verifyTime}}</td>
+                <td>{{pair.secret}}</td>
+            </tr>
+            {% endfor %}
+
+        </table>
+        {% endif %}
+
         <table class="table table-striped">
             <tr>
                 <th>Date</th>
                 <th>Options</th>
             </tr>
 
-            {% for run in runs %}
-            <tr>
+            
+            {#<tr>
                 <td>{{run.date}}</td>
                 <td>
                     <a class="btn btn-sm btn-info" role="button" href="/admin/listRunDetails/{{run.key.urlsafe()}}">Details</a>
                     <a class="btn btn-sm btn-danger emailSend" role="button" id="{{run.key.urlsafe()}}" href="#">Send email</button>
                 </td>
-            </tr>
-            {% endfor %}
-
+            </tr>#}
         </table>
 
     </div>

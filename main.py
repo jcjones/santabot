@@ -27,8 +27,8 @@ class SantaPerson(ndb.Model):
 
 class SantaPairing(ndb.Model):
     """ Represents a pair of partipciants in a Secret Santa run. """    
-    source = ndb.StringProperty()
-    target = ndb.StringProperty()
+    source = ndb.KeyProperty(kind=SantaPerson)
+    target = ndb.KeyProperty(kind=SantaPerson)
     verifyTime = ndb.DateTimeProperty()
     secret = ndb.StringProperty()
 
@@ -99,27 +99,6 @@ def usefulTestMethod():
 
     # santa_pair.put()
 
-def email_send(sourceUser=None, targetUser=None, pairSecret=None):
-    message = mail.EmailMessage(sender="The Santabot of Win <santa@secretsantabotwin.appspot.com>")
-    message.subject = "{sourceName}'s Secret Santa Result".format(sourceName=sourceUser.name)
-    message.to = "{sourceName} <{sourceEmail}>".format(sourceName=sourceUser.name, sourceEmail=sourceUser.email)
-    message.body = """
-    Dear {sourceName}:
-
-    You are the Secret Santa for {targetName}. You aren't done yet! You must acknowledge by clicking this link:
-    {mainPage} .
-
-    Please DO NOT LOSE THIS EMAIL. There is NO EASILY ACCESSIBLE RECORD of whom you picked... so, don't forget! 
-    J.C. doesn't want to have to potentially blow the surprise to himself by having look this up! While the rest 
-    of you revel in determining the whole web this wacky algorithm determines, he dwells in the land of magic 
-    where ANYTHING CAN HAPPEN. LA LA LA LA (FA LA LA)
-
-    The SantaBot
-    """.format(targetName=targetUser.name, sourceName=sourceUser.name, mainPage=url_for('email_acknowledge', key=pairSecret, _external=True))
-
-    message.send()
-
-    logging.info(message.body)
 
 @app.route('/group/<groupName>')
 def view_group(groupName):
@@ -192,60 +171,101 @@ def ready_group(groupName):
 
 @app.route("/email/acknowledge/<key>")
 def email_acknowledge(key):
-    found = None
-    successful = False
 
     pair = SantaPairing.query(SantaPairing.secret == key).get()
-    pair.verify()
-    pair.put()
+    if pair:
+        if not pair.isVerified():
+            pair.verify()
+            pair.put()
 
-    logging.info("Found: {} {}".format(pair, key))
+            logging.info("Found: {} {}".format(pair, key))
     
-    if successful:
-        flash("Thanks for verifying!")
+            flash("Thanks for verifying!")
+        else:
+            flash("Yup, you already confirmed.")
+
     else:
-        flash("Yup, you already confirmed.")
+        flash("Unknown authentication ID. Please check your link.")
 
-    return render_template('index.html', users=users, userRecord=getCurrentUserRecord())
+    return redirect(url_for('mainPage'))
 
-@app.route('/admin/listGroups')
+@app.route('/admin')
 def admin_list():
     structure=[]
 
     for sg in SantaGroup.query():
         group = {}
 
-        group["name"] = sg.name
+        group["group"] = sg
         group["people"] = []
 
-        for email in sg.emails:
-            person = SantaPerson.query(SantaPerson.email == email).get()
+        # for pairKey in sg.pairs:
+        #     pair = pairKey.get()
 
-            group["people"].append(person)
+        for reg in SantaRegistration.query(SantaRegistration.group == sg.key):
+            person = reg.person.get()
+
+            group["people"].append(reg)
 
         structure.append(group)
 
     logging.info("Structure: {}".format(structure))
     return render_template('listGroups.html', users=users, listObj=structure)
 
-@app.route('/admin/group/new/<groupName>')
-def admin_new_group(groupName):
-    grpObj = SantaGroup(name=groupName, registering=True)
-    grpObj.put()
-    return redirect(url_for('view_group', groupName=groupName))
+@app.route('/admin/group/new', methods=['POST'])
+def admin_new_group():
+    if "groupName" in request.form:
+        groupName = request.form['groupName']
+        logging.info("CHK0 %s", groupName)
+
+        group = SantaGroup.query(SantaGroup.name==groupName).get()
+        if group is None:
+            grpObj = SantaGroup(name=groupName, registering=True)
+            grpObj.put()
+
+            logging.info("Created group " + groupName)
+            flash("Created group " + groupName)
+
+        return redirect(url_for('view_group', groupName=groupName))
+
+    return redirect(url_for('admin_list'))
+
+@app.route('/admin/group/<groupName>/close')
+def admin_close_registration(groupName):
+    group = SantaGroup.query(SantaGroup.name==groupName).get()
+
+    # Error check
+    if group is None:
+        abort(404)
+
+    group.registering = False
+    group.put()
+
+    flash("Registration is now closed.")
+
+    return redirect(url_for('admin_list'))
 
 @app.route('/admin/group/<groupName>/run')
 def admin_run(groupName):
     group = SantaGroup.query(SantaGroup.name==groupName).get()
 
-    logging.info("Group is {}".format(group))
+    # Error check
+    if group is None:
+        abort(404)
+
+
+    # Don't run if we've already run.
+    if group.runDate:
+        logging.info("This has already run.")
+        flash("This has already run.")
+        return redirect(url_for('admin_list'))
+
 
     sources = []
     targets = None
 
-    for email in group.emails:
-        person = SantaPerson.query(SantaPerson.email == email).get()
-        sources.append(person)
+    for reg in SantaRegistration.query(SantaRegistration.group == group.key):
+        sources.append(reg)
 
     logging.info("Got people: {}".format(sources))
 
@@ -261,68 +281,67 @@ def admin_run(groupName):
         stillTrying = False
 
         for i in range(len(sources)):
-            logging.info("{} == {}".format(sources[i].email, targets[i].email))
+            logging.info("{} == {}".format(sources[i].person.get().email, targets[i].person.get().email))
 
             # Don't assign to self
-            if sources[i].email == targets[i].email:
+            if sources[i].person.get().email == targets[i].person.get().email:
                 logging.info("Failed self")
                 stillTrying = True
                 break
             # Don't assign to prohibited person
-            if targets[i].email in sources[i].prohibitedEmails.split(';'):
+            if targets[i].person in sources[i].prohibitedPeople:
                 logging.info("Failed right prohibs left")
                 stillTrying = True
                 break
 
-    runObj = SantaRun(parent=runsKey, group=group.key)
-    runObj.put()
-
+   
+    # Create our URL-safe key spcace
     keyField = string.lowercase+string.digits
-    
+     # Clear out pairs
+    del group.pairs[:]
+
     for i in range(len(sources)):
-        logging.info("{} ==> {}".format(sources[i].email, targets[i].email))
+        logging.info("{} ==> {}".format(sources[i].person.get().email, targets[i].person.get().email))
 
-        keyString = ''.join(random.sample(keyField, 32))        
+        keyString = ''.join(random.sample(keyField, 12))        
 
-        santa_pair = SantaPairing(parent=runObj.key, source=sources[i].email, target=targets[i].email, secret=keyString)
+        santa_pair = SantaPairing(parent=group.key, source=sources[i].person, target=targets[i].person, secret=keyString)
         santa_pair.put()
+        group.pairs.append(santa_pair.key)
 
-    return redirect(url_for('admin_list_run_details', runId=runObj.key.urlsafe()))
+    group.runDate = datetime.datetime.now()
+    group.put()
 
-@app.route('/admin/listRunDetails/<runId>', methods=['POST'])
-def admin_list_email_run_messages(runId):
-    runObj = ndb.Key(urlsafe=runId).get()
-    logging.info("Run ID: {} run {}".format(runId, runObj))
-
-    for pair in SantaPairing.query(ancestor=runObj.key):
+    for pairKey in group.pairs:
+        pair = pairKey.get()
 
         logging.info("PAIR: " + str(pair))
-        source = getSantaPersonForEmail(pair.source)
-        target = getSantaPersonForEmail(pair.target)
+        sourceUser = pair.source.get()
+        targetUser = pair.target.get()
 
-        email_send(sourceUser=source, targetUser=target, pairSecret=pair.key)
-    return ""
+        message = mail.EmailMessage(sender="The Santabot of Win <santa@secretsantabotwin.appspot.com>")
+        message.subject = "{sourceName}'s Secret Santa Result".format(sourceName=sourceUser.name)
+        message.to = "{sourceName} <{sourceEmail}>".format(sourceName=sourceUser.name, sourceEmail=sourceUser.email)
+        message.body = render_template('email-result.txt', targetName=targetUser.name, sourceName=sourceUser.name, ackPage=url_for('email_acknowledge', key=pair.secret, _external=True))
+        message.html = render_template('email-result.html', targetName=targetUser.name, sourceName=sourceUser.name, ackPage=url_for('email_acknowledge', key=pair.secret, _external=True))
+        message.send()
+        logging.info(message.body)
 
-@app.route('/admin/listRunDetails/<runId>')
-def admin_list_run_details(runId):
-    runObj = ndb.Key(urlsafe=runId).get()
-    
-    groupObj = runObj.group.get()
-    pairs = SantaPairing.query(ancestor=runObj.key)
+    flash("Done! Sent %i emails." % len(group.pairs))    
+    return redirect(url_for('admin_list'))
 
-    return render_template('santaRunDetails.html', users=users, runObj=runObj, pairsList=pairs, groupObj=groupObj)
 
-@app.route('/admin/group/<groupName>/list')
+@app.route('/admin/group/<groupName>')
 def admin_list_runs(groupName):
     groupObj = SantaGroup.query(SantaGroup.name==groupName).get()
+    if groupObj is None:
+        abort(404)
+
+    pairs = SantaPairing.query(ancestor=groupObj.key)
 
     logging.info("groupObj Obj: %s", groupObj)
 
-    runList = SantaRun.query(SantaRun.group==groupObj.key).order(-SantaRun.date)
-
-    logging.info("runList Obj: %s", runList)
-
-    return render_template('santaRunList.html', users=users, group=groupObj, runs=runList)
+    return render_template('santaRunList.html', users=users, group=groupObj, pairsList=pairs)
 
 
 @app.errorhandler(404)
