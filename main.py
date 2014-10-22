@@ -58,9 +58,10 @@ class SantaRegistration(ndb.Model):
 # Top level keys for the datastore
 peopleKey = ndb.Key("People", "people")
 groupsKey = ndb.Key("Groups", "groups")
+registrationKey = ndb.Key("Registrations", "registrations")
 
 def getSantaPersonForEmail(email=None):
-    return SantaPerson.query(SantaPerson.email == email).get()
+    return SantaPerson.query(SantaPerson.email == email, ancestor=peopleKey).get()
 
 def getCurrentUserRecord():
     if users.get_current_user() and users.get_current_user().email():
@@ -74,14 +75,14 @@ def mainPage():
     record = getCurrentUserRecord()
     if not record and users.get_current_user():
         user = users.get_current_user()
-        record = SantaPerson(user=user, email=user.email(), name=user.nickname())
+        record = SantaPerson(parent=peopleKey, user=user, email=user.email(), name=user.nickname())
         record.put()
 
     memberGroups = []
     logging.warn("record: %s", str(record) )
     if record:
         # Get all santa groups the current user is in
-        for reg in SantaRegistration.query(SantaRegistration.person == record.key):
+        for reg in SantaRegistration.query(SantaRegistration.person == record.key, ancestor=registrationKey):
             group = reg.group.get()
             memberGroups.append({"group":group, "pair":None})
             logging.warn("Group: %s %s", str(group), reg )
@@ -107,14 +108,14 @@ def view_group(groupName):
     # if userObj is None:        
     #     return redirect(users.create_login_url(url_for('view_group', groupName=groupName)))
 
-    grpObj = SantaGroup.query(SantaGroup.name==groupName).get()
+    grpObj = SantaGroup.query(SantaGroup.name==groupName, ancestor=groupsKey).get()
     if grpObj:
 
         target = None
         others = []
         joined = False
 
-        for reg in SantaRegistration.query(SantaRegistration.group == grpObj.key):
+        for reg in SantaRegistration.query(SantaRegistration.group == grpObj.key, ancestor=registrationKey):
             person = reg.person.get()
             logging.info("Checking on %s", reg)
             if person is not getCurrentUserRecord():
@@ -128,24 +129,24 @@ def view_group(groupName):
 
 @app.route('/group/<groupName>/join')
 def join_group(groupName):
-    grpObj = SantaGroup.query(SantaGroup.name==groupName).get()
+    grpObj = SantaGroup.query(SantaGroup.name==groupName, ancestor=groupsKey).get()
     userObj = getCurrentUserRecord()
 
     if userObj is None:        
         return redirect(users.create_login_url(url_for('view_group', groupName=groupName)))
 
     # Dedupe
-    if SantaRegistration.query(SantaRegistration.group == grpObj.key, SantaRegistration.person == userObj.key).get():
+    if SantaRegistration.query(SantaRegistration.group == grpObj.key, SantaRegistration.person == userObj.key, ancestor=registrationKey).get():
         return redirect(url_for('view_group', groupName=groupName))        
 
-    reg = SantaRegistration(group = grpObj.key, person = userObj.key)    
+    reg = SantaRegistration(parent=registrationKey, group=grpObj.key, person=userObj.key)
     reg.put()
 
     return redirect(url_for('view_group', groupName=groupName))
 
 @app.route('/group/<groupName>/ready', methods=['POST'])
 def ready_group(groupName):
-    grpObj = SantaGroup.query(SantaGroup.name==groupName).get()
+    grpObj = SantaGroup.query(SantaGroup.name==groupName, ancestor=groupsKey).get()
     userObj = getCurrentUserRecord()
 
     logging.info("oh %s", request.form)
@@ -156,7 +157,7 @@ def ready_group(groupName):
     if "unchecked1" in request.form:
         logging.info("CHK1 %s", request.form['unchecked1'])
 
-    reg = SantaRegistration.query(SantaRegistration.group == grpObj.key, SantaRegistration.person == userObj.key).get()
+    reg = SantaRegistration.query(SantaRegistration.group == grpObj.key, SantaRegistration.person == userObj.key, ancestor=registrationKey).get()
     reg.shoppingAdvice = str(request.form['message'])
     reg.completionDate = datetime.datetime.now()
     del reg.prohibitedPeople[:]
@@ -193,7 +194,7 @@ def email_acknowledge(key):
 def admin_list():
     structure=[]
 
-    for sg in SantaGroup.query():
+    for sg in SantaGroup.query(ancestor=groupsKey):
         group = {}
 
         group["group"] = sg
@@ -202,7 +203,7 @@ def admin_list():
         # for pairKey in sg.pairs:
         #     pair = pairKey.get()
 
-        for reg in SantaRegistration.query(SantaRegistration.group == sg.key):
+        for reg in SantaRegistration.query(SantaRegistration.group == sg.key, ancestor=registrationKey):
             person = reg.person.get()
 
             group["people"].append(reg)
@@ -218,9 +219,9 @@ def admin_new_group():
         groupName = request.form['groupName']
         logging.info("CHK0 %s", groupName)
 
-        group = SantaGroup.query(SantaGroup.name==groupName).get()
+        group = SantaGroup.query(SantaGroup.name==groupName, ancestor=groupsKey).get()
         if group is None:
-            grpObj = SantaGroup(name=groupName, registering=True)
+            grpObj = SantaGroup(parent=groupsKey, name=groupName, registering=True)
             grpObj.put()
 
             logging.info("Created group " + groupName)
@@ -232,7 +233,7 @@ def admin_new_group():
 
 @app.route('/admin/group/<groupName>/close')
 def admin_close_registration(groupName):
-    group = SantaGroup.query(SantaGroup.name==groupName).get()
+    group = SantaGroup.query(SantaGroup.name==groupName, ancestor=groupsKey).get()
 
     # Error check
     if group is None:
@@ -247,7 +248,7 @@ def admin_close_registration(groupName):
 
 @app.route('/admin/group/<groupName>/run')
 def admin_run(groupName):
-    group = SantaGroup.query(SantaGroup.name==groupName).get()
+    group = SantaGroup.query(SantaGroup.name==groupName, ancestor=groupsKey).get()
 
     # Error check
     if group is None:
@@ -264,7 +265,7 @@ def admin_run(groupName):
     sources = []
     targets = None
 
-    for reg in SantaRegistration.query(SantaRegistration.group == group.key):
+    for reg in SantaRegistration.query(SantaRegistration.group == group.key, ancestor=registrationKey):
         sources.append(reg)
 
     logging.info("Got people: {}".format(sources))
@@ -333,7 +334,7 @@ def admin_run(groupName):
 
 @app.route('/admin/group/<groupName>')
 def admin_list_runs(groupName):
-    groupObj = SantaGroup.query(SantaGroup.name==groupName).get()
+    groupObj = SantaGroup.query(SantaGroup.name==groupName, ancestor=groupsKey).get()
     if groupObj is None:
         abort(404)
 
