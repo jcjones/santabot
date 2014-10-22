@@ -91,7 +91,7 @@ def mainPage():
 @app.route('/test')
 def usefulTestMethod():
 
-    flash("OH NO")
+    flash("OH NO", "error")
 
     
     return render_template('index.html', users=users, userRecord=getCurrentUserRecord())
@@ -180,12 +180,12 @@ def email_acknowledge(key):
 
             logging.info("Found: {} {}".format(pair, key))
     
-            flash("Thanks for verifying!")
+            flash("Thanks for verifying!", "success")
         else:
-            flash("Yup, you already confirmed.")
+            flash("Yup, you already confirmed.", "info")
 
     else:
-        flash("Unknown authentication ID. Please check your link.")
+        flash("Unknown authentication ID. Please check your link.", "warning")
 
     return redirect(url_for('mainPage'))
 
@@ -224,7 +224,7 @@ def admin_new_group():
             grpObj.put()
 
             logging.info("Created group " + groupName)
-            flash("Created group " + groupName)
+            flash("Created group " + groupName, "success")
 
         return redirect(url_for('view_group', groupName=groupName))
 
@@ -241,7 +241,7 @@ def admin_close_registration(groupName):
     group.registering = False
     group.put()
 
-    flash("Registration is now closed.")
+    flash("Registration is now closed.", "info")
 
     return redirect(url_for('admin_list'))
 
@@ -257,7 +257,7 @@ def admin_run(groupName):
     # Don't run if we've already run.
     if group.runDate:
         logging.info("This has already run.")
-        flash("This has already run.")
+        flash("This has already run.", "info")
         return redirect(url_for('admin_list'))
 
 
@@ -327,7 +327,7 @@ def admin_run(groupName):
         message.send()
         logging.info(message.body)
 
-    flash("Done! Sent %i emails." % len(group.pairs))    
+    flash("Done! Sent %i emails." % len(group.pairs), "success")
     return redirect(url_for('admin_list'))
 
 

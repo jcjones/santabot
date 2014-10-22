@@ -3,7 +3,7 @@
 <head>
     {% block head %}
     <!-- Bootstrap core CSS -->
-    <link href="/static/css/bootstrap.css" rel="stylesheet">
+    <link href="/static/bootstrap/dist/css/bootstrap.css" rel="stylesheet">
     <!-- Our CSS -->
     <link href="/static/css/santabot.css" rel="stylesheet">
     
@@ -15,19 +15,6 @@
     {% include "navbar.html" %}
 
     <div class="container container-full">
-        {% with messages = get_flashed_messages() %}
-          {% if messages %}
-            <ul class=flashes>
-            {% for message in messages %}
-            <div class="alert alert-warning alert-dismissable">
-              <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
-              {{ message }}
-            </div>
-            {% endfor %}
-            </ul>
-          {% endif %}
-        {% endwith %}
-
         {% block content %}{% endblock %}
     </div>
 
@@ -44,10 +31,30 @@
     <!-- Bootstrap core JavaScript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
-    <script src="/static/js/jquery-2.0.3.min.js"></script>
-    <script src="/static/js/bootstrap.min.js"></script>
+    <script src="/static/jquery/dist/jquery.min.js"></script>
+    <script src="/static/bootstrap/dist/js/bootstrap.min.js"></script>
+    <!-- Sweet Alerts -->
+    <script src="/static/bootstrap-sweetalert/lib/sweet-alert.js"></script>
+    <link href="/static/bootstrap-sweetalert/lib/sweet-alert.css" rel="stylesheet">
 
     {% block scripts %}{% endblock %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+    <script>
+    $(function(){
+        window.setTimeout(function(){
+        {% for category,message in messages %}
+            swal({
+                "type": "{{ category }}",
+                "title": "{{ message }}"
+            });
+        {% endfor %}
+        }, 500);
+    });
+    </script>
+      {% endif %}
+    {% endwith %}
+
 
 </body>
 </html>
