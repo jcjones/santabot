@@ -11,7 +11,7 @@
 <div class="row block-row">
     <div class="col-md-12">
         <h1>
-            {{group.name}}
+            Secrets of {{group.name}}
         </h1>
 
 
@@ -20,52 +20,18 @@
             <tr>
                 <th>Source</th>
                 <th>Target</th>
-                <th>Verify Time</th>
-                <th>Key</th>
             </tr>
 
             {% for pair in pairsList %}
             <tr>
-                <td>{{pair.source.get().name}}</td>
-                <td>{{pair.target.get().name}}</td>
-                <td>{{pair.verifyTime}}</td>
-                <td>{{pair.secret}}</td>
+                <td>{{pair.source.get().person.get().name}}</td>
+                <td>{{pair.target.get().person.get().name}}</td>
             </tr>
             {% endfor %}
 
         </table>
         {% endif %}
 
-        <table class="table table-striped">
-            <tr>
-                <th>Date</th>
-                <th>Options</th>
-            </tr>
-
-            
-            {#<tr>
-                <td>{{run.date}}</td>
-                <td>
-                    <a class="btn btn-sm btn-info" role="button" href="/admin/listRunDetails/{{run.key.urlsafe()}}">Details</a>
-                    <a class="btn btn-sm btn-danger emailSend" role="button" id="{{run.key.urlsafe()}}" href="#">Send email</button>
-                </td>
-            </tr>#}
-        </table>
-
     </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-$(document).ready(function(){
-    $(".emailSend").click(function(obj){
-        var runKey = $(this).attr("id");
-        $.post("/admin/listRunDetails/"+runKey, function(data){
-            alert("Done!")
-        });
-    });
-});
-
-</script>
 {% endblock %}
