@@ -2,6 +2,10 @@
 
 Cybersantas are the best Santas. Santabot lets interested folks join a Secret Santa group, provide feedback as to what they'd like and optionally people they'd rather not be Santa for, and then the Algorithm hands out gift assignments.
 
+## License
+
+Santabot is licensed under the terms of the GPLv3; see LICENSE.
+
 ## State diagram
 
 ```

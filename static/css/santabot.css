@@ -3,6 +3,19 @@ body {
 	background-color: #FCE9E8;
 }
 
+.panel .nav {
+	margin-top: 20px;
+}
+
+.panel a, a:hover, a:visited, a:link, a:active {
+	color: #3c763d;
+	text-decoration: none;
+}
+
+.container {
+	margin-top: 10px;
+}
+
 /*.navbar {
 	background-color: ;
 	color: #FFFFFF;
@@ -15,11 +28,11 @@ body {
 .navbar-default .navbar-nav {
 	color: #673600;
 }*/
-
+/*
 h1 {
 	color: #8B3129;
 }
 
 h2 {
 	color: #736B2D;
-}
+}*/

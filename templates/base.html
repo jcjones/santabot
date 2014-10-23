@@ -4,29 +4,62 @@
     {% block head %}
     <!-- Bootstrap core CSS -->
     <link href="/static/bootstrap/dist/css/bootstrap.css" rel="stylesheet">
+    <!-- Font So Awesome -->
+    <link href="/static/fontawesome/css/font-awesome.css" rel="stylesheet">
     <!-- Our CSS -->
     <link href="/static/css/santabot.css" rel="stylesheet">
     
-    <title>{% block title %}{% endblock %} - SantaBot of Win</title>
+    <title>{% block title %}{% endblock %} - SantaBot</title>
     {% endblock %}
 </head>
 <body>
 
-    {% include "navbar.html" %}
-
     <div class="container container-full">
-        {% block content %}{% endblock %}
+        <div class="panel panel-success">
+          <div class="panel-heading container-fluid">
+            <div class="row">
+                <div class="col-md-8">
+                    <h1><a href="/">{% block pagetitle %}{% endblock %}</a></h1>
+                </div>
+                <div class="col-md-4">
+                    <ul class="nav nav-pills">
+                    {% if users.is_current_user_admin() %}
+                      <li><a href="/admin">Admin</b></a></li>
+                    {% endif %}
+                    {% if users.get_current_user() %}
+                      <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                          {% if userRecord %}
+                          {{ userRecord.name }}
+                          {% else %}
+                          {{ users.get_current_user().email() }}
+                          {% endif %}
+                          <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                          <li><a href="/profile">profile</a></li>
+                          <li><a href="{{users.create_logout_url('/')}}">sign out</a></li>
+                        </ul>
+                      </li>
+                    {% else %}
+                      <li><a href="{{users.create_login_url('/')}}">Sign In</a></li>
+                    {% endif %}
+                    </ul>
+                </div>
+            </div>
+          </div>
+          <div class="panel-body">
+            {% block content %}{% endblock %}
+          </div>
+          <div class="panel-footer">
+            <p class="text-muted">
+                {% block footer %}
+                SantaBot is free and open source software, licensed under the GPL v3. You can find its source code online at <a href="https://github.com/jcjones/santabot"><i class="fa fa-github"></i> github.com/jcjones/santabot</a>
+                {% endblock %}
+            </p>
+          </div>
+        </div>        
     </div>
 
-    <footer class="footer">
-        <div class="row">
-            <div class="col-md-offset-8 col-md-4">
-                {% block footer %}
-                &copy; Copyright 2014 by Pug</a>.
-                {% endblock %}
-            </div>
-        </div>
-    </footer>
 
     <!-- Bootstrap core JavaScript
     ================================================== -->

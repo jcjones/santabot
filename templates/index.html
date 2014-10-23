@@ -1,5 +1,6 @@
 {% extends "base.html" %}
-{% block title %}People{% endblock %}
+{% block title %}Welcome to Santabot{% endblock %}
+{% block pagetitle %}Welcome to Santabot{% endblock %}
 {% block head %}
     {{ super() }}
     <style type="text/css">
@@ -7,38 +8,32 @@
     </style>
 {% endblock %}
 {% block content %}
-    
-    <h1>The SantaBot of Win</h1>    
+<p class="lead">Cybersantas are the best Santas.</p>
 
-	<p class="lead">
-		This website exists to provide Secret Santa Services to a select group of super special somebodies.
-	</p>
+<p>Santabot lets interested folks join a Secret Santa group, provide feedback as to what they'd like and optionally people they'd rather not be Santa for, and then the Algorithm hands out gift assignments.</p>
 
-    {% if userRecord %}
-    <p>
-    	Welcome, {{ userRecord.name }}.
-
-        {% if memberGroups %}
-            <p>You're a member of:
-                <ul>
-            {% for mg in memberGroups %}
-                <li><a href="/group/{{mg.group.name}}">{{mg.group.name}}</a>
-                {% if mg.pair %}
-                    and have {{mg.pair.target}}
-                {% endif %}
-                </li>
-            {% endfor %}
-            </ul>
-            </p>
-        {% else %}
-            <p>You are not currently part of any groups. You need to ask for an invitation to join a group.</p>
+ {% if userRecord %}
+<p>
+    {% if memberGroups %}
+    <p>You're a member of:
+        <ul>
+    {% for mg in memberGroups %}
+        <li><a href="/group/{{mg.group.name}}"><i class="fa fa-gift"></i> {{mg.group.name}}</a>
+        {% if mg.pair %}
+            and have {{mg.pair.target}}
         {% endif %}
+        </li>
+    {% endfor %}
+        </ul>
     </p>
     {% else %}
-    <p>
-        If you're one of those special somebodies, please <a href="{{users.create_login_url('/')}}">Sign In</a>.
-    </p>
+    <p>You are not currently part of any groups. You need to ask for an invitation to join a group.</p>
     {% endif %}
-	
+</p>
+{% else %}
+<p>
+    If you're one of those special somebodies, please <a href="{{users.create_login_url('/')}}">Sign In</a>.
+</p>
+{% endif %}
 
 {% endblock %}

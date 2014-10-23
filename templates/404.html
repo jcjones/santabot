@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}404{% endblock %}
+{% block pagetitle %}four oh four{% endblock %}
 {% block head %}
     {{ super() }}
     <style type="text/css">
@@ -7,12 +8,9 @@
     </style>
 {% endblock %}
 {% block content %}
-    
-    <h1>four oh four</h1>    
-
-	<p>
-		It looks like you're lost. Would you like some free candy?
-	</p>
-	
+  
+<p class="lead">
+	It looks like you're lost. Maybe you should go <a href="/"><i class="fa fa-home"></i> home</a>
+</p>	
 
 {% endblock %}

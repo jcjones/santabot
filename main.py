@@ -1,12 +1,26 @@
-"""`main` is the top level module for your Flask application."""
+"""
+    SantaBot, because Cyber Santas are the Best Santas
+    Copyright (C) 2014 James 'J.C.' Jones
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
 
 # Import the Flask Framework
 from flask import Flask
 from flask import render_template, redirect, url_for, request, abort, flash
 app = Flask(__name__)
 app.secret_key = 'squirrel'
-# Note: We don't need to call run() since our application is embedded within
-# the App Engine WSGI application server.
 
 import logging
 import random
@@ -18,6 +32,9 @@ from google.appengine.api import users
 from google.appengine.ext import ndb
 from google.appengine.api import mail
 
+#
+# Data models
+#
 class SantaPerson(ndb.Model):
     """ Describes a partipciant in the Secret Santa """
     email = ndb.StringProperty()
@@ -33,6 +50,7 @@ class SantaPairing(ndb.Model):
 class SantaGroup(ndb.Model):
     """ Models a group of secret santa participants """
     name = ndb.StringProperty()
+    ownerId = ndb.StringProperty()
     registering = ndb.BooleanProperty()
     createDate = ndb.DateTimeProperty(auto_now_add=True)
     runDate = ndb.DateTimeProperty()
@@ -44,14 +62,20 @@ class SantaRegistration(ndb.Model):
     group = ndb.KeyProperty(kind=SantaGroup)
     createDate = ndb.DateTimeProperty(auto_now_add=True)
     completionDate = ndb.DateTimeProperty()
+    viewedDate = ndb.DateTimeProperty()
     prohibitedPeople = ndb.KeyProperty(kind=SantaPerson, repeated=True)
     shoppingAdvice = ndb.BlobProperty()
 
-# Top level keys for the datastore
+#
+# Top level (ancestor) keys for the datastore
+#
 peopleKey = ndb.Key("People", "people")
 groupsKey = ndb.Key("Groups", "groups")
 registrationKey = ndb.Key("Registrations", "registrations")
 
+#
+# Convenience Methods
+#
 def getSantaPersonForEmail(email=None):
     return SantaPerson.query(SantaPerson.email == email, ancestor=peopleKey).get()
 
@@ -73,6 +97,10 @@ def createUserProfile(destination):
     record.put()
     # TODO: Redirect them to the profile page somehow
     return redirect(url_for('configure_profile', destination=destination))
+
+#
+# WebApp Endpoints
+#
 
 @app.route('/')
 def mainPage():
@@ -104,7 +132,7 @@ def save_profile():
     if request.form['destination']:
         return redirect(request.form['destination'])
 
-    return render_template('profile.html', users=users, userRecord=getCurrentUserRecord())
+    return redirect(url_for('mainPage'))
 
 @app.route('/test')
 def usefulTestMethod():
@@ -233,13 +261,15 @@ def admin_list():
 
 @app.route('/admin/group/new', methods=['POST'])
 def admin_new_group():
+    userObj = getCurrentUserRecord()
+
     if "groupName" in request.form:
         groupName = request.form['groupName']
         logging.info("CHK0 %s", groupName)
 
         group = SantaGroup.query(SantaGroup.name==groupName, ancestor=groupsKey).get()
         if group is None:
-            grpObj = SantaGroup(parent=groupsKey, name=groupName, registering=True)
+            grpObj = SantaGroup(parent=groupsKey, name=groupName, ownerId=userObj.userId, registering=True)
             grpObj.put()
 
             logging.info("Created group " + groupName)
