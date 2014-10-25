@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Santa Runs{% endblock %}
+{% block content %}
+
+<div class="row block-row">
+  <div class="col-md-12">
+    <h2>Details for {{group.name}}</h2>
+
+    <table class="table table-striped">
+      <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Avoiding</th>
+        <th>Join date</th>
+        <th>Registration complete date</th>
+      </tr>
+    {% for reg in regsList %}
+      {% set person = reg.person.get() %}
+      <tr>
+        <td>{{person.name}}</td>
+        <td>{{person.email}}</td>
+        <td>
+            {% for frenemy in reg.prohibitedPeople %}
+            {{frenemy.get().name}},
+            {% endfor %}
+        </td>
+        <td>{{reg.createDate}}</td>
+        <td>{{reg.completionDate}}</td>
+      </tr>
+    {% endfor %}
+    </table>        
+
+
+    {% if pairsList %}
+    <h2>Secrets</h2>
+
+    <table class="table table-striped">
+      <tr>
+        <th>Source</th>
+        <th>Target</th>
+      </tr>
+
+      {% for pair in pairsList %}
+      <tr>
+        <td>{{pair.source.get().person.get().name}}</td>
+        <td>{{pair.target.get().person.get().name}}</td>
+      </tr>
+      {% endfor %}
+
+    </table>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

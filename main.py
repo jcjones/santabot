@@ -63,6 +63,7 @@ class SantaGroup(ndb.Model):
     """ Models a group of secret santa participants """
     name = ndb.StringProperty()
     ownerId = ndb.StringProperty()
+    owner = ndb.KeyProperty(kind=SantaPerson)
     registering = ndb.BooleanProperty()
     createDate = ndb.DateTimeProperty(auto_now_add=True)
     runDate = ndb.DateTimeProperty()
@@ -314,6 +315,7 @@ def new_group():
         return redirect(url_for('mainPage'))
 
     groupName = request.form['groupName']
+    groupName = groupName.strip(string.whitespace)
     logging.info("CHK0 %s", groupName)
 
     if len(groupName) < 5:
@@ -322,7 +324,7 @@ def new_group():
 
     group = SantaGroup.query(SantaGroup.name==groupName, ancestor=groupsKey).get()
     if group is None:
-        group = SantaGroup(parent=groupsKey, name=groupName, ownerId=userObj.userId, registering=True)
+        group = SantaGroup(parent=groupsKey, name=groupName, owner=userObj.key, ownerId=userObj.userId, registering=True)
         group.put()
 
         logging.info("Created group " + groupName)
@@ -446,23 +448,9 @@ def group_run(groupId):
 def admin_list():
     structure=[]
 
-    for sg in SantaGroup.query(ancestor=groupsKey):
-        group = {}
+    groups = SantaGroup.query(ancestor=groupsKey)
 
-        group["group"] = sg
-        group["people"] = []
-
-        # for pairKey in sg.pairs:
-        #     pair = pairKey.get()
-
-        for reg in SantaRegistration.query(SantaRegistration.group == sg.key, ancestor=registrationKey):
-            person = reg.person.get()
-
-            group["people"].append(reg)
-
-        structure.append(group)
-
-    return render_template('listGroups.html', users=users, userRecord=getCurrentUserRecord(), listObj=structure)
+    return render_template('admin-list.html', users=users, userRecord=getCurrentUserRecord(), groups=groups)
 
 @app.route('/admin/group/<groupId>')
 def admin_list_runs(groupId):
@@ -471,10 +459,12 @@ def admin_list_runs(groupId):
         abort(404)
 
     pairs = SantaPairing.query(ancestor=groupObj.key)
+    regs = SantaRegistration.query(SantaRegistration.group == groupObj.key, ancestor=registrationKey)
+
 
     logging.info("groupObj Obj: %s", groupObj)
 
-    return render_template('santaRunList.html', users=users, userRecord=getCurrentUserRecord(), group=groupObj, pairsList=pairs)
+    return render_template('admin-run-details.html', users=users, userRecord=getCurrentUserRecord(), group=groupObj, pairsList=pairs, regsList=regs)
 
 @app.route('/admin/cron/daily')
 def admin_cron_daily():

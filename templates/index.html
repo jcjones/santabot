@@ -14,14 +14,11 @@
 
  {% if userRecord %}
     {% if memberGroups %}
-    <h2>Groups you're a part of</h2>
+    <h2>Your groups</h2>
     <div class="row">
     {% for mg in memberGroups %}
         <div class="col-md-4">
             <h3><a href="/group/{{mg.group.key.urlsafe()}}"><i class="fa fa-gift"></i> {{mg.group.name}}
-            {% if mg.pair %}
-            <small> and have {{mg.pair.target}}</a>
-            {% endif %}
             </a></h3>
         </div>
     {% endfor %}
@@ -32,7 +29,7 @@
     {% endif %}
 
     <div class="col-md-12">
-    <h2>Start your own group</h2>
+    <h2>Start your own group!</h2>
      <form role="form" action="/group/new" method="post" class="form-horizontal">
       <div class="form-group" id="nameBlock">
         <input type="text" class="form-control" name="groupName" placeholder="New group name, like 2014 Sales Party" id="groupName">
@@ -42,7 +39,7 @@
     </div>
 {% else %}
 <p>
-    If you're one of those special somebodies, please <a href="{{users.create_login_url('/')}}">Sign In</a>.
+    Anyone can use Santabot, you just need a Google account. If you want to enlist Santabot's help, just <a href="{{users.create_login_url('/')}}">Sign In</a>.
 </p>
 {% endif %}
 

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}List of Groups{% endblock %}
+{% block pagetitle %}List of Groups{% endblock %}
+
+{% block head %}
+    {{ super() }}
+    <style type="text/css">
+        .important { color: #336699; }
+    </style>
+{% endblock %}
+{% block content %}
+
+<div class="row block-row">
+	{% for group in groups %}
+	<div class="col-md-12">
+		<h1>{{group.name}}</h1>
+		{{group.ownerId}}
+		<p>
+			<ul class="list-inline">				
+				<li><a href="/group/{{group.key.urlsafe()}}">View</a></li>
+				<li>Ran at {{group.runDate}}</li>
+				<li><a href="/admin/group/{{group.key.urlsafe()}}">Reveal secrets</a></li>
+			</ul>
+		</p>
+	</div>
+	{% endfor %}
+</div>
+{% endblock %}
