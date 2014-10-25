@@ -26,14 +26,18 @@ import logging
 import random
 import string
 import datetime
+import urllib, hashlib
 
 # Google APIs
 from google.appengine.api import users
 from google.appengine.ext import ndb
 from google.appengine.api import mail
 
+# Santa help
+from people_matcher import PeopleMatcher
+
 # Constants
-SANTABOT_SEND_FROM = "The Santabot Elfbots <elfbots@santabot.co>"
+SANTABOT_SEND_FROM = "The Santabot Elfbots <elfbots@secretsantabotwin.appspotmail.com>"
 
 #
 # Data models
@@ -44,6 +48,11 @@ class SantaPerson(ndb.Model):
     name = ndb.StringProperty()
     createDate = ndb.DateTimeProperty(auto_now_add=True)
     userId = ndb.StringProperty()
+
+    def getAvatarUrl(this, size=80):
+        email = this.email.lower()
+        return "http://www.gravatar.com/avatar/" + hashlib.md5(email).hexdigest() + "?s=" + str(size) + "&d=retro"
+
 
 class SantaPairing(ndb.Model):
     """ Represents a pair of partipciants in a Secret Santa run. """    
@@ -102,10 +111,31 @@ def createUserProfile(destination):
     if user is None:
         raise Exception("Assertion failure; user is not logged in.")
 
-    record = SantaPerson(parent=peopleKey, userId=user.user_id(), email=user.email(), name=user.email())
+    name = user.email()
+    if user.nickname():
+        name = user.nickname()
+
+    record = SantaPerson(parent=peopleKey, userId=user.user_id(), email=user.email(), name=name)
     record.put()
     # TODO: Redirect them to the profile page somehow
     return redirect(url_for('configure_profile', destination=destination))
+
+
+def send_mail_close_registration(userObj=None, groupObj=None):
+    message = mail.EmailMessage(sender=SANTABOT_SEND_FROM)
+    message.subject = "Complete Santa Registration for {groupName}".format(name=userObj.name, groupName=groupObj.name)
+    message.to = "{name} <{email}>".format(name=userObj.name, email=userObj.email)
+    message.body = render_template('email-complete.txt', name=userObj.name, groupName=groupObj.name, groupPage=url_for('view_group', groupId=groupObj.key.urlsafe(), _external=True))
+    message.html = render_template('email-complete.html', name=userObj.name, groupName=groupObj.name, groupPage=url_for('view_group', groupId=groupObj.key.urlsafe(), _external=True))
+    message.send()
+
+def send_mail_result(sourceUser=None, targetUser=None, groupObj=None, targetReg=None):
+    message = mail.EmailMessage(sender=SANTABOT_SEND_FROM)
+    message.subject = "Secret Santa Result for {sourceName}".format(sourceName=sourceUser.name)
+    message.to = "{sourceName} <{sourceEmail}>".format(sourceName=sourceUser.name, sourceEmail=sourceUser.email)
+    message.body = render_template('email-result.txt', targetName=targetUser.name, sourceName=sourceUser.name, shoppingAdvice=targetReg.shoppingAdvice, ackPage=url_for('view_group', groupId=groupObj.key.urlsafe(), _external=True))
+    message.html = render_template('email-result.html', targetName=targetUser.name, sourceName=sourceUser.name, shoppingAdvice=targetReg.shoppingAdvice, ackPage=url_for('view_group', groupId=groupObj.key.urlsafe(), _external=True))
+    message.send()
 
 
 #
@@ -158,11 +188,34 @@ def save_profile():
 
 @app.route('/test')
 def usefulTestMethod():
+    grpObj = ndb.Key(urlsafe="ahVkZXZ-c2VjcmV0c2FudGFib3R3aW5yKQsSBkdyb3VwcyIGZ3JvdXBzDAsSClNhbnRhR3JvdXAYgICAgIDUvgoM").get()
+    return admin_run(grpObj.key.urlsafe())
 
-    flash("OH NO", "error")
+    # pm = PeopleMatcher()
 
-    
-    return render_template('index.html', users=users, userRecord=getCurrentUserRecord())
+    # for reg in SantaRegistration.query(SantaRegistration.group == grpObj.key, ancestor=registrationKey):
+    #     pm.addPerson(reg.person, prohibited=reg.prohibitedPeople)
+
+    # pm.addPerson("A", prohibited=["C"])
+    # pm.addPerson("B", prohibited=["C"])
+    # pm.addPerson("C", prohibited=[])
+    # pm.addPerson("D", prohibited=["C"])
+
+    # graphSegments = None
+
+    # for i in range(2,-1,-1):
+    #     logging.info("============= %d" % i)
+    #     pm.setHonoredProhibited(i)
+    #     logging.info(pm)
+
+    #     graphSegments = pm.execute()
+    #     if graphSegments:
+    #         break
+
+    # if graphSegments is None:
+    #     raise Exception("Could not solve", pm)
+
+    # return str(pm) + "\n\n" + str(graphSegments)
 
 
     # santa_pair.put()
@@ -179,17 +232,17 @@ def view_group(groupId):
 
         target = None
         others = []
+        members = []
         myReg = None
 
         if userObj:
             for reg in SantaRegistration.query(SantaRegistration.group == grpObj.key, ancestor=registrationKey):
                 person = reg.person.get()
-                logging.info("Checking on %s", reg)
+                members.append(person)
                 if person != userObj:
                     others.append(person)
                 else:
                     myReg = reg
-                    logging.info("Found myself %s", person)
 
             for pairKey in grpObj.pairs:
                 pair = pairKey.get()
@@ -198,7 +251,14 @@ def view_group(groupId):
                     logging.info("Checking against %s", userObj)
                     target = pair.target.get()
 
-        return render_template('groupView.html', users=users, userRecord=getCurrentUserRecord(), group=grpObj, myReg=myReg, target=target, others=others)
+        if grpObj.registering:
+            template = "group-registering.html"
+        elif target:
+            template = "group-result.html"
+        else:
+            template = "group-complete.html"
+
+        return render_template(template, users=users, userRecord=getCurrentUserRecord(), group=grpObj, myReg=myReg, target=target, others=others, members=members)
     except(Unregistered):
         return createUserProfile(url_for('view_group', groupId=groupId))
 
@@ -317,7 +377,14 @@ def admin_new_group():
 
 @app.route('/admin/group/<groupId>/close')
 def admin_close_registration(groupId):
+    userObj = getCurrentUserRecord()
+    if not userObj:
+        return redirect(url_for('mainPage'))
+
     group = ndb.Key(urlsafe=groupId).get()
+
+    if group.ownerId != userObj.userId:
+        abort(401)    
 
     # Error check
     if group is None:
@@ -333,12 +400,7 @@ def admin_close_registration(groupId):
     for reg in SantaRegistration.query(SantaRegistration.group == group.key, ancestor=registrationKey):
         userObj = reg.person.get()
         # Send email
-        message = mail.EmailMessage(sender=SANTABOT_SEND_FROM)
-        message.subject = "Complete Registration for Secret Santa group {groupName}".format(name=userObj.name, groupName=group.name)
-        message.to = "{name} <{email}>".format(name=userObj.name, email=userObj.email)
-        message.body = render_template('email-complete.txt', name=userObj.name, groupName=group.name, groupPage=url_for('view_group', groupId=group.key.urlsafe(), _external=True))
-        message.html = render_template('email-complete.html', name=userObj.name, groupName=group.name, groupPage=url_for('view_group', groupId=group.key.urlsafe(), _external=True))
-        message.send()
+        send_mail_close_registration(userObj=userObj, groupObj=group)
 
     flash("Registration is now complete for {}".format(group.name), "info")
 
@@ -346,67 +408,57 @@ def admin_close_registration(groupId):
 
 @app.route('/admin/group/<groupId>/run')
 def admin_run(groupId):
+    userObj = getCurrentUserRecord()
+    if not userObj:
+        return redirect(url_for('mainPage'))
+
     group = ndb.Key(urlsafe=groupId).get()
+
+    if group.ownerId != userObj.userId:
+        abort(401)
 
     # Error check
     if group is None:
         abort(404)
 
-
     # Don't run if we've already run.
     if group.runDate:
-        logging.info("This has already run.")
+        logging.info("This has already run. {}".format(group.runDate))
+        group.runDate = None
+        group.put()
         flash("{} has already run.".format(group.name), "info")
         return redirect(url_for('admin_list'))
 
-
-    sources = []
-    targets = None
+    pm = PeopleMatcher()
 
     for reg in SantaRegistration.query(SantaRegistration.group == group.key, ancestor=registrationKey):
-        sources.append(reg)
-        if reg.completionDate is None:
-            # Don't run if anyone hasn't completed their registration.
-            flash("{} has not completed their registration.".format(reg.person.get().name), "error")
-            return redirect(url_for('admin_list'))
+        pm.addPerson(reg.person, prohibited=reg.prohibitedPeople)
 
-    logging.info("Got people: {}".format(sources))
+    graphSegments = None
 
-    stillTrying = True
-    tryNumber = 0
+    for i in range(2,-1,-1):
+        logging.info("============= %d" % i)
+        pm.setHonoredProhibited(i)
+        logging.info(pm)
 
-    while stillTrying and tryNumber < 99:
-        tryNumber = tryNumber+1
-        targets = list(sources)
-        random.shuffle(targets)
+        graphSegments = pm.execute()
+        if graphSegments:
+            break
 
-        # Assume we're done
-        stillTrying = False
+    # At this point we should have the graph
+    if graphSegments is None:
+        raise Exception("Could not solve", pm)
 
-        for i in range(len(sources)):
-            logging.info("{} == {}".format(sources[i].person.get().email, targets[i].person.get().email))
-
-            # Don't assign to self
-            if sources[i].person.get().email == targets[i].person.get().email:
-                logging.info("Failed self")
-                stillTrying = True
-                break
-            # Don't assign to prohibited person
-            if targets[i].person in sources[i].prohibitedPeople:
-                logging.info("Failed right prohibs left")
-                stillTrying = True
-                break
-
-   
-    # Create our URL-safe key spcace
-    keyField = string.lowercase+string.digits
-     # Clear out pairs
+    # Clear out pairs
     del group.pairs[:]
 
-    for i in range(len(sources)):
-        logging.info("{} ==> {}".format(sources[i].person.get().email, targets[i].person.get().email))
+    for segment in graphSegments:
+        sourceReg = SantaRegistration.query(SantaRegistration.person == segment["source"], SantaRegistration.group == group.key, ancestor=registrationKey).get()
+        targetReg = SantaRegistration.query(SantaRegistration.person == segment["target"], SantaRegistration.group == group.key, ancestor=registrationKey).get()
 
-        santa_pair = SantaPairing(parent=group.key, source=sources[i].key, target=targets[i].key)
+        logging.debug("{} ==> {}".format(segment["source"].get().email, segment["target"].get().email))
+
+        santa_pair = SantaPairing(parent=group.key, source=sourceReg.key, target=targetReg.key)
         santa_pair.put()
         group.pairs.append(santa_pair.key)
 
@@ -416,20 +468,13 @@ def admin_run(groupId):
     for pairKey in group.pairs:
         pair = pairKey.get()
 
-        logging.info("PAIR: " + str(pair))
+        logging.debug("PAIR: " + str(pair))
         sourceReg = pair.source.get()
         sourceUser = sourceReg.person.get()
         targetReg = pair.target.get()
         targetUser = targetReg.person.get()
 
-
-
-        message = mail.EmailMessage(sender=SANTABOT_SEND_FROM)
-        message.subject = "Secret Santa Result for {sourceName}".format(sourceName=sourceUser.name)
-        message.to = "{sourceName} <{sourceEmail}>".format(sourceName=sourceUser.name, sourceEmail=sourceUser.email)
-        message.body = render_template('email-result.txt', targetName=targetUser.name, sourceName=sourceUser.name, shoppingAdvice=targetReg.shoppingAdvice, ackPage=url_for('view_group', groupId=group.key.urlsafe(), _external=True))
-        message.html = render_template('email-result.html', targetName=targetUser.name, sourceName=sourceUser.name, shoppingAdvice=targetReg.shoppingAdvice, ackPage=url_for('view_group', groupId=group.key.urlsafe(), _external=True))
-        message.send()
+        send_mail_result(sourceUser=sourceUser, targetUser=targetUser, groupObj=group, targetReg=targetReg)
 
     flash("Done! Sent %i emails." % len(group.pairs), "success")
     return redirect(url_for('admin_list'))
@@ -447,6 +492,15 @@ def admin_list_runs(groupId):
 
     return render_template('santaRunList.html', users=users, userRecord=getCurrentUserRecord(), group=groupObj, pairsList=pairs)
 
+@app.route('/admin/cron/daily')
+def admin_cron_daily():
+    for reg in SantaRegistration.query(SantaRegistration.completionDate == None, ancestor=registrationKey):
+        logging.info("reg {} is not completed".format(reg))
+        userObj = reg.person.get()
+        groupObj = reg.group.get()
+        send_mail_close_registration(groupObj=groupObj, userObj=userObj)
+
+    return "OK"
 
 @app.errorhandler(404)
 def error_404(e):

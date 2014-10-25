@@ -1,0 +1,4 @@
+cron:
+- description: Resend registration emails
+  url: /admin/cron/daily
+  schedule: every 24 hours

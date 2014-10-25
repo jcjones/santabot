@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{{group.name}}{% endblock %}
+{% block pagetitle %}{{group.name}}{% endblock %}
+{% block content %}
+
+<p>You are the <em>Secret Santa</em> for</p></p>
+
+<h2>{{target.person.get().name}}</h2>
+
+<p>{{target.person.get().name}} provided you this shopping advice:</p>
+<blockquote class="well">
+	{{target.shoppingAdvice}}
+</blockquote>
+
+<p>Good luck. On a scale of 0 to 1, I hope your holiday satisfaction equals 1.<p>
+
+{% endblock %}

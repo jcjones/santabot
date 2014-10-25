@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}{{group.name}}{% endblock %}
+{% block pagetitle %}{{group.name}}{% endblock %}
+{% block content %}
+
+{% if not myReg %}
+<p>You are not currently registered for this group. If you would like to join, <a href="/group/{{group.key.urlsafe()}}/join">click here</a>.</p>
+
+{% else %}
+<p>We're waiting on the rest of the registered folks to sign up, and then you can fill in your preferences. If you want to remind someone else to join, give them <a href="/group/{{group.key.urlsafe()}}">this link</a>. The group creator can move you to the next phase.</p>
+
+<p>So far, we the following people have signed up:</p>
+<div class="row">
+	{% for person in members %}
+	<div class="col-md-6">
+		<h3><img src="{{person.getAvatarUrl(size=40)}}" class="img-rounded">
+		{{person.name}}</h3>
+	</div>
+	{% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}

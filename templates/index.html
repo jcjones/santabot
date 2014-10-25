@@ -13,23 +13,23 @@
 <p>Santabot lets interested folks join a Secret Santa group, provide feedback as to what they'd like and optionally people they'd rather not be Santa for, and then the Algorithm hands out gift assignments.</p>
 
  {% if userRecord %}
-<p>
     {% if memberGroups %}
-    <p>You're a member of:
-        <ul>
-        {% for mg in memberGroups %}
-        <li><a href="/group/{{mg.group.key.urlsafe()}}"><i class="fa fa-gift"></i> {{mg.group.name}}</a>
+    <p>You're a member of:</p>
+    <div class="row">
+    {% for mg in memberGroups %}
+        <div class="col-md-4">
+            <h3><a href="/group/{{mg.group.key.urlsafe()}}"><i class="fa fa-gift"></i> {{mg.group.name}}
             {% if mg.pair %}
-            and have {{mg.pair.target}}
+            <small> and have {{mg.pair.target}}</a>
             {% endif %}
-        </li>
-        {% endfor %}
-        </ul>
-    </p>
+            </a></h3>
+        </div>
+    {% endfor %}
+    </div>
+
     {% else %}
     <p>You are not currently part of any groups. You need to ask for an invitation to join a group.</p>
     {% endif %}
-</p>
 {% else %}
 <p>
     If you're one of those special somebodies, please <a href="{{users.create_login_url('/')}}">Sign In</a>.
