@@ -14,7 +14,7 @@
 
  {% if userRecord %}
     {% if memberGroups %}
-    <p>You're a member of:</p>
+    <h2>Groups you're a part of</h2>
     <div class="row">
     {% for mg in memberGroups %}
         <div class="col-md-4">
@@ -30,10 +30,35 @@
     {% else %}
     <p>You are not currently part of any groups. You need to ask for an invitation to join a group.</p>
     {% endif %}
+
+    <div class="col-md-12">
+    <h2>Start your own group</h2>
+     <form role="form" action="/group/new" method="post" class="form-horizontal">
+      <div class="form-group" id="nameBlock">
+        <input type="text" class="form-control" name="groupName" placeholder="New group name, like 2014 Sales Party" id="groupName">
+      </div>
+      <button id="groupNew" type="submit" class="btn btn-default">Submit</button>
+     </form>
+    </div>
 {% else %}
 <p>
     If you're one of those special somebodies, please <a href="{{users.create_login_url('/')}}">Sign In</a>.
 </p>
 {% endif %}
 
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function(){
+    $("#groupNew").click(function(){
+        if ($("#groupName").val().length < 4) {
+            $("#nameBlock").addClass("has-error");
+            return false;
+        } else {
+            $("#nameBlock").removeClass("has-error");
+        }
+    });
+});
+</script>
 {% endblock %}

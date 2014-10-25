@@ -3,6 +3,8 @@
 {% block pagetitle %}{{group.name}}{% endblock %}
 {% block content %}
 
+{% include 'group-owner.html' %}
+
 <p>You are the <em>Secret Santa</em> for</p></p>
 
 <h2>{{target.person.get().name}}</h2>

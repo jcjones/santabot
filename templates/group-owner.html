@@ -1,0 +1,51 @@
+{% if group.ownerId == userRecord.userId %}
+<ul class="list-inline well">
+  <li><strong>Hey group owner!</strong></li>
+  {% if group.registering == True %}
+  <li><a href="/group/{{group.key.urlsafe()}}/close">Close Registration</a></li>
+  {% elif group.runDate is none %}
+  <li><a href="/group/{{group.key.urlsafe()}}/run">Send the Emails</a></li>
+  {% else %}
+  <li>Ran at {{group.runDate}}</li>
+  {% endif %}
+</ul>
+
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <h4 class="panel-title">
+      <a data-toggle="collapse" data-parent="#accordion" href="#collapseOne">
+        Registered People
+      </a>
+    </h4>
+  </div>
+  <div id="collapseOne" class="panel-collapse collapse">
+    <div class="panel-body">
+      <table class="table table-striped">
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Avoiding</th>
+          <th>Join date</th>
+          <th>Registration complete date</th>
+        </tr>
+      {% for reg in registrants %}
+        {% set person = reg.person.get() %}
+        <tr>
+          <td>{{person.name}}</td>
+          <td>{{person.email}}</td>
+          <td>
+            {% for frenemy in reg.prohibitedPeople %}
+            {{frenemy.get().name}},
+            {% endfor %}
+          </td>
+          <td>{{reg.createDate}}</td>
+          <td>{{reg.completionDate}}</td>
+        </tr>
+      {% endfor %}
+      </table>        
+    </div>
+  </div>
+</div>
+
+
+{% endif %}

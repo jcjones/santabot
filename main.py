@@ -189,36 +189,7 @@ def save_profile():
 @app.route('/test')
 def usefulTestMethod():
     grpObj = ndb.Key(urlsafe="ahVkZXZ-c2VjcmV0c2FudGFib3R3aW5yKQsSBkdyb3VwcyIGZ3JvdXBzDAsSClNhbnRhR3JvdXAYgICAgIDUvgoM").get()
-    return admin_run(grpObj.key.urlsafe())
-
-    # pm = PeopleMatcher()
-
-    # for reg in SantaRegistration.query(SantaRegistration.group == grpObj.key, ancestor=registrationKey):
-    #     pm.addPerson(reg.person, prohibited=reg.prohibitedPeople)
-
-    # pm.addPerson("A", prohibited=["C"])
-    # pm.addPerson("B", prohibited=["C"])
-    # pm.addPerson("C", prohibited=[])
-    # pm.addPerson("D", prohibited=["C"])
-
-    # graphSegments = None
-
-    # for i in range(2,-1,-1):
-    #     logging.info("============= %d" % i)
-    #     pm.setHonoredProhibited(i)
-    #     logging.info(pm)
-
-    #     graphSegments = pm.execute()
-    #     if graphSegments:
-    #         break
-
-    # if graphSegments is None:
-    #     raise Exception("Could not solve", pm)
-
-    # return str(pm) + "\n\n" + str(graphSegments)
-
-
-    # santa_pair.put()
+    return group_run(grpObj.key.urlsafe())
 
 
 @app.route('/group/<groupId>')
@@ -233,12 +204,14 @@ def view_group(groupId):
         target = None
         others = []
         members = []
+        registrants = []
         myReg = None
 
         if userObj:
             for reg in SantaRegistration.query(SantaRegistration.group == grpObj.key, ancestor=registrationKey):
                 person = reg.person.get()
                 members.append(person)
+                registrants.append(reg)
                 if person != userObj:
                     others.append(person)
                 else:
@@ -258,7 +231,7 @@ def view_group(groupId):
         else:
             template = "group-complete.html"
 
-        return render_template(template, users=users, userRecord=getCurrentUserRecord(), group=grpObj, myReg=myReg, target=target, others=others, members=members)
+        return render_template(template, users=users, userRecord=getCurrentUserRecord(), group=grpObj, myReg=myReg, target=target, others=others, members=members, registrants=registrants)
     except(Unregistered):
         return createUserProfile(url_for('view_group', groupId=groupId))
 
@@ -331,52 +304,36 @@ def ready_group(groupId):
 
     return "OK"
 
-@app.route('/admin')
-def admin_list():
-    structure=[]
-
-    for sg in SantaGroup.query(ancestor=groupsKey):
-        group = {}
-
-        group["group"] = sg
-        group["people"] = []
-
-        # for pairKey in sg.pairs:
-        #     pair = pairKey.get()
-
-        for reg in SantaRegistration.query(SantaRegistration.group == sg.key, ancestor=registrationKey):
-            person = reg.person.get()
-
-            group["people"].append(reg)
-
-        structure.append(group)
-
-    return render_template('listGroups.html', users=users, userRecord=getCurrentUserRecord(), listObj=structure)
-
-@app.route('/admin/group/new', methods=['POST'])
-def admin_new_group():
+@app.route('/group/new', methods=['POST'])
+def new_group():
     userObj = getCurrentUserRecord()
     if not userObj:
         return redirect(url_for('mainPage'))
 
-    if "groupName" in request.form:
-        groupName = request.form['groupName']
-        logging.info("CHK0 %s", groupName)
+    if "groupName" not in request.form:
+        return redirect(url_for('mainPage'))
 
-        group = SantaGroup.query(SantaGroup.name==groupName, ancestor=groupsKey).get()
-        if group is None:
-            group = SantaGroup(parent=groupsKey, name=groupName, ownerId=userObj.userId, registering=True)
-            group.put()
+    groupName = request.form['groupName']
+    logging.info("CHK0 %s", groupName)
 
-            logging.info("Created group " + groupName)
-            flash("Created group " + groupName, "success")
+    if len(groupName) < 5:
+        flash("The group name is too short.","error")
+        return redirect(url_for('mainPage'))
 
-        return redirect(url_for('view_group', groupId=group.key.urlsafe()))
+    group = SantaGroup.query(SantaGroup.name==groupName, ancestor=groupsKey).get()
+    if group is None:
+        group = SantaGroup(parent=groupsKey, name=groupName, ownerId=userObj.userId, registering=True)
+        group.put()
 
-    return redirect(url_for('admin_list'))
+        logging.info("Created group " + groupName)
+        flash("Created group " + groupName, "success")
 
-@app.route('/admin/group/<groupId>/close')
-def admin_close_registration(groupId):
+    return join_group(group.key.urlsafe())
+
+    # return redirect(url_for('view_group', groupId=group.key.urlsafe()))
+
+@app.route('/group/<groupId>/close')
+def close_registration(groupId):
     userObj = getCurrentUserRecord()
     if not userObj:
         return redirect(url_for('mainPage'))
@@ -390,9 +347,10 @@ def admin_close_registration(groupId):
     if group is None:
         abort(404)
 
-    if SantaRegistration.query(SantaRegistration.group == group.key, ancestor=registrationKey).count() < 2:
-        flash("You need at least two people to close the group.", "error")
-        return redirect(url_for('admin_list'))
+    if SantaRegistration.query(SantaRegistration.group == group.key, ancestor=registrationKey).count() < 3:
+        flash("You need at least three people to close the group.", "error")
+        return redirect(url_for('view_group', groupId=groupId))
+
 
     group.registering = False
     group.put()
@@ -404,10 +362,10 @@ def admin_close_registration(groupId):
 
     flash("Registration is now complete for {}".format(group.name), "info")
 
-    return redirect(url_for('admin_list'))
+    return redirect(url_for('view_group', groupId=groupId))
 
-@app.route('/admin/group/<groupId>/run')
-def admin_run(groupId):
+@app.route('/group/<groupId>/run')
+def group_run(groupId):
     userObj = getCurrentUserRecord()
     if not userObj:
         return redirect(url_for('mainPage'))
@@ -424,15 +382,19 @@ def admin_run(groupId):
     # Don't run if we've already run.
     if group.runDate:
         logging.info("This has already run. {}".format(group.runDate))
-        group.runDate = None
-        group.put()
         flash("{} has already run.".format(group.name), "info")
-        return redirect(url_for('admin_list'))
+        return redirect(url_for('view_group', groupId=groupId))    
+
 
     pm = PeopleMatcher()
 
     for reg in SantaRegistration.query(SantaRegistration.group == group.key, ancestor=registrationKey):
         pm.addPerson(reg.person, prohibited=reg.prohibitedPeople)
+        # Don't run if anyone hasn't registered.
+        if not reg.completionDate:
+            flash("Not everyone has completed signup.", "warning")
+            return redirect(url_for('view_group', groupId=groupId))    
+
 
     graphSegments = None
 
@@ -477,8 +439,30 @@ def admin_run(groupId):
         send_mail_result(sourceUser=sourceUser, targetUser=targetUser, groupObj=group, targetReg=targetReg)
 
     flash("Done! Sent %i emails." % len(group.pairs), "success")
-    return redirect(url_for('admin_list'))
+    return redirect(url_for('view_group', groupId=groupId))
 
+
+@app.route('/admin')
+def admin_list():
+    structure=[]
+
+    for sg in SantaGroup.query(ancestor=groupsKey):
+        group = {}
+
+        group["group"] = sg
+        group["people"] = []
+
+        # for pairKey in sg.pairs:
+        #     pair = pairKey.get()
+
+        for reg in SantaRegistration.query(SantaRegistration.group == sg.key, ancestor=registrationKey):
+            person = reg.person.get()
+
+            group["people"].append(reg)
+
+        structure.append(group)
+
+    return render_template('listGroups.html', users=users, userRecord=getCurrentUserRecord(), listObj=structure)
 
 @app.route('/admin/group/<groupId>')
 def admin_list_runs(groupId):

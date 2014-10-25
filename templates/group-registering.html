@@ -3,6 +3,8 @@
 {% block pagetitle %}{{group.name}}{% endblock %}
 {% block content %}
 
+{% include 'group-owner.html' %}
+
 {% if not myReg %}
 <p>You are not currently registered for this group. If you would like to join, <a href="/group/{{group.key.urlsafe()}}/join">click here</a>.</p>
 

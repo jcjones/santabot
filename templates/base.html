@@ -16,7 +16,7 @@
 
     <div class="container container-full">
         <div class="panel panel-success">
-          <div class="panel-heading container-fluid">
+          <div class="panel-heading base-panel-heading container-fluid">
             <div class="row">
                 <div class="col-xs-6">
                   <h1><a href="/">{% block pagetitle %}{% endblock %}</a></h1>
@@ -48,7 +48,7 @@
                 </div>
             </div>
           </div>
-          <div class="panel-body text-center">
+          <div class="panel-body base-panel-body text-center">
             {% block content %}{% endblock %}
           </div>
           <div class="panel-footer">
@@ -76,14 +76,14 @@
       {% if messages %}
     <script>
     $(function(){
-        window.setTimeout(function(){
         {% for category,message in messages %}
-            swal({
-                "type": "{{ category }}",
-                "title": "{{ message }}"
-            });
-        {% endfor %}
+        window.setTimeout(function(){
+          swal({
+              "type": "{{ category }}",
+              "title": "{{ message }}"
+          });
         }, 500);
+        {% endfor %}
     });
     </script>
       {% endif %}

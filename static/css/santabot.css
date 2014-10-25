@@ -12,13 +12,13 @@ body {
 	text-decoration: none;
 }
 
-.panel-heading {
+.base-panel-heading {
 	background-image: url('/static/img/header.jpg');
 	background-position: center center;
 	background-size: cover;	
 }
 
-.panel-body {
+.base-panel-body {
 	background-image: url('/static/img/santabot_background.jpg');
 	background-position: center bottom;
 	background-size: cover;

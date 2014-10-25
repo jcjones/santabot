@@ -3,6 +3,9 @@
 {% block pagetitle %}{{group.name}}{% endblock %}
 
 {% block content %}
+
+{% include 'group-owner.html' %}
+
 {% if not myReg %}
   <p>I'm sorry, registration for this group is closed.</p>
 {% else %}
@@ -90,11 +93,11 @@ $(document).ready(function(){
     }
 
     // Verify the message got set and is long enough
-    if (! $("#message").attr("reset") || countWords($("#message").val()) < 10) {
+    if (! $("#message").attr("reset") || countWords($("#message").val()) < 5) {
       $("#messageBlock").addClass("has-error");
       swal({   
           title: "Come on, you gotta be more specific.",
-          text: "I'm making sure you type at least ten words, because you're supposed to give your Secret Santa some help. You know, real help. Or at least type funny words to fill space.",   
+          text: "I'm making sure you type at least five words, because you're supposed to give your Secret Santa some help. You know, real help. Or at least type funny words to fill space.",   
           type: "error"
         });
       return;
