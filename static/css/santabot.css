@@ -8,8 +8,22 @@ body {
 }
 
 .panel a, a:hover, a:visited, a:link, a:active {
-	color: #3c763d;
+	color: #84201D;
 	text-decoration: none;
+}
+
+.panel-heading {
+	background-image: url('/static/img/header.jpg');
+	background-position: center center;
+	background-size: cover;	
+}
+
+.panel-body {
+	background-image: url('/static/img/santabot_background.jpg');
+	background-position: center bottom;
+	background-size: cover;
+	min-height: 600px;
+	font-size: 1.5em;
 }
 
 .container {

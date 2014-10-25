@@ -32,6 +32,9 @@ from google.appengine.api import users
 from google.appengine.ext import ndb
 from google.appengine.api import mail
 
+# Constants
+SANTABOT_SEND_FROM = "The Santabot Elfbots <elfbots@santabot.co>"
+
 #
 # Data models
 #
@@ -79,24 +82,31 @@ registrationKey = ndb.Key("Registrations", "registrations")
 def getSantaPersonForEmail(email=None):
     return SantaPerson.query(SantaPerson.email == email, ancestor=peopleKey).get()
 
+class Unregistered(Exception):
+    pass
+
 def getCurrentUserRecord():
+    record = None
     user = users.get_current_user()
 
     # Return the record, or none. In which case the caller should catch it.
     if user and user.user_id():
-        return SantaPerson.query(SantaPerson.userId == user.user_id(), ancestor=peopleKey).get()
+        record = SantaPerson.query(SantaPerson.userId == user.user_id(), ancestor=peopleKey).get()
+        if not record:
+            raise Unregistered()
 
-    return None
+    return record
 
 def createUserProfile(destination):
     user = users.get_current_user()
     if user is None:
-        return redirect(users.create_login_url(destination))
+        raise Exception("Assertion failure; user is not logged in.")
 
     record = SantaPerson(parent=peopleKey, userId=user.user_id(), email=user.email(), name=user.email())
     record.put()
     # TODO: Redirect them to the profile page somehow
     return redirect(url_for('configure_profile', destination=destination))
+
 
 #
 # WebApp Endpoints
@@ -105,34 +115,46 @@ def createUserProfile(destination):
 @app.route('/')
 def mainPage():
     """Return a friendly HTTP greeting."""
-    record = getCurrentUserRecord()
+    try:
+        userObj = getCurrentUserRecord()
 
-    memberGroups = []
-    logging.warn("record: %s", str(record) )
-    if record:
-        # Get all santa groups the current user is in
-        for reg in SantaRegistration.query(SantaRegistration.person == record.key, ancestor=registrationKey):
-            group = reg.group.get()
-            memberGroups.append({"group":group, "pair":None})
-            logging.warn("Group: %s %s", str(group), reg )
+        memberGroups = []
+        if userObj:
+            # Get all santa groups the current user is in
+            for reg in SantaRegistration.query(SantaRegistration.person == userObj.key, ancestor=registrationKey):
+                group = reg.group.get()
+                memberGroups.append({"group":group, "pair":None})
+                logging.warn("Group: %s %s", str(group), reg )
 
-    return render_template('index.html', users=users, userRecord=record, memberGroups=memberGroups)
+        return render_template('index.html', users=users, userRecord=userObj, memberGroups=memberGroups)
+    except(Unregistered):
+        return createUserProfile(url_for('mainPage'))
 
 @app.route('/profile')
 def configure_profile():
-    destination = request.args.get('destination', '')
-    return render_template('profile.html', users=users, userRecord=getCurrentUserRecord(), destination=destination)
+    try:
+        userObj = getCurrentUserRecord()
+        logging.info("UserOBJ is {}".format(userObj))
+        destination = request.args.get('destination', '')
+        return render_template('profile.html', users=users, userRecord=userObj, destination=destination)
+    except(Unregistered):
+        return createUserProfile(url_for('configure_profile'))
+
 
 @app.route('/profile/update', methods=['POST'])
 def save_profile():
-    record = getCurrentUserRecord()
-    record.name = request.form['userName']
-    record.put()
+    try:
+        record = getCurrentUserRecord()
+        record.name = request.form['userName']
+        record.put()
 
-    if request.form['destination']:
-        return redirect(request.form['destination'])
+        if request.form['destination']:
+            return redirect(request.form['destination'])
 
-    return redirect(url_for('mainPage'))
+        return redirect(url_for('mainPage'))
+
+    except(Unregistered):
+        return createUserProfile(url_for('mainPage'))
 
 @app.route('/test')
 def usefulTestMethod():
@@ -146,15 +168,14 @@ def usefulTestMethod():
     # santa_pair.put()
 
 
-@app.route('/group/<groupName>')
-def view_group(groupName):
-    userObj = getCurrentUserRecord()
-
-    # if userObj is None:        
-    #     return redirect(users.create_login_url(url_for('view_group', groupName=groupName)))
-
-    grpObj = SantaGroup.query(SantaGroup.name==groupName, ancestor=groupsKey).get()
-    if grpObj:
+@app.route('/group/<groupId>')
+def view_group(groupId):
+    try:
+        userObj = getCurrentUserRecord()
+        
+        grpObj = ndb.Key(urlsafe=groupId).get()
+        if grpObj is None:
+            abort(404)
 
         target = None
         others = []
@@ -178,44 +199,57 @@ def view_group(groupName):
                     target = pair.target.get()
 
         return render_template('groupView.html', users=users, userRecord=getCurrentUserRecord(), group=grpObj, myReg=myReg, target=target, others=others)
-    abort(404)
+    except(Unregistered):
+        return createUserProfile(url_for('view_group', groupId=groupId))
 
-@app.route('/group/<groupName>/join')
-def join_group(groupName):
-    grpObj = SantaGroup.query(SantaGroup.name==groupName, ancestor=groupsKey).get()
+@app.route('/group/<groupId>/join')
+def join_group(groupId):
+    try:
+        grpObj = ndb.Key(urlsafe=groupId).get()
+        if grpObj is None:
+            abort(404)
+
+        userObj = getCurrentUserRecord()
+        if userObj is None:
+            return redirect(users.create_login_url(url_for('join_group', groupId=groupId)))
+
+        # Dedupe
+        if SantaRegistration.query(SantaRegistration.group == grpObj.key, SantaRegistration.person == userObj.key, ancestor=registrationKey).get():
+            return redirect(url_for('view_group', groupId=grpObj.key.urlsafe()))
+
+        reg = SantaRegistration(parent=registrationKey, group=grpObj.key, person=userObj.key)
+
+        # Send email
+        message = mail.EmailMessage(sender=SANTABOT_SEND_FROM)
+        message.subject = "Welcome to the Secret Santa group {groupName}".format(name=userObj.name, groupName=grpObj.name)
+        message.to = "{name} <{email}>".format(name=userObj.name, email=userObj.email)
+        message.body = render_template('email-welcome.txt', name=userObj.name, groupName=grpObj.name, groupPage=url_for('view_group', groupId=groupId, _external=True))
+        message.html = render_template('email-welcome.html', name=userObj.name, groupName=grpObj.name, groupPage=url_for('view_group', groupId=groupId, _external=True))
+        message.send()
+        logging.info("MESSAGE BODY: " + message.body)
+
+        reg.put()
+
+        # Tell the user
+        flash("Joined group " + grpObj.name, "success")
+
+        return redirect(url_for('view_group', groupId=groupId))
+    except(Unregistered):
+        return createUserProfile(url_for('join_group', groupId=groupId))
+
+@app.route('/group/<groupId>/ready', methods=['POST'])
+def ready_group(groupId):
+    grpObj = ndb.Key(urlsafe=groupId).get()
+    if grpObj is None:
+        abort(404)
     userObj = getCurrentUserRecord()
-    if userObj is None:
-        return createUserProfile(url_for('join_group', groupName=groupName))
-
-    # Dedupe
-    if SantaRegistration.query(SantaRegistration.group == grpObj.key, SantaRegistration.person == userObj.key, ancestor=registrationKey).get():
-        return redirect(url_for('view_group', groupName=groupName))
-
-    reg = SantaRegistration(parent=registrationKey, group=grpObj.key, person=userObj.key)
-    reg.put()
-
-    # Send email
-    message = mail.EmailMessage(sender="The Santabot of Win <santa@secretsantabotwin.appspotmail.com>")
-    message.subject = "Welcome to the Secret Santa group {groupName}".format(name=userObj.name, groupName=groupName)
-    message.to = "{name} <{email}>".format(name=userObj.name, email=userObj.email)
-    message.body = render_template('email-welcome.txt', name=userObj.name, groupName=groupName, groupPage=url_for('view_group', groupName=groupName, _external=True))
-    message.html = render_template('email-welcome.html', name=userObj.name, groupName=groupName, groupPage=url_for('view_group', groupName=groupName, _external=True))
-    message.send()
-    logging.info("MESSAGE BODY: " + message.body)
-
-    return redirect(url_for('view_group', groupName=groupName))
-
-@app.route('/group/<groupName>/ready', methods=['POST'])
-def ready_group(groupName):
-    grpObj = SantaGroup.query(SantaGroup.name==groupName, ancestor=groupsKey).get()
-    userObj = getCurrentUserRecord()
-    if userObj is None:
-        raise Exception("How?")
+    if not userObj:
+        raise(401)
 
     shoppingAdvice = str(request.form['message'])
     if shoppingAdvice is None or len(shoppingAdvice) < 20:
         flash("You need to provide some more detailed shopping advice." ,"error")
-        return redirect(url_for('view_group', groupName=groupName))
+        return redirect(url_for('view_group', groupId=groupId))
 
     logging.info("oh %s", request.form)
     logging.info("MSG %s", request.form['message'])
@@ -262,6 +296,8 @@ def admin_list():
 @app.route('/admin/group/new', methods=['POST'])
 def admin_new_group():
     userObj = getCurrentUserRecord()
+    if not userObj:
+        return redirect(url_for('mainPage'))
 
     if "groupName" in request.form:
         groupName = request.form['groupName']
@@ -269,19 +305,19 @@ def admin_new_group():
 
         group = SantaGroup.query(SantaGroup.name==groupName, ancestor=groupsKey).get()
         if group is None:
-            grpObj = SantaGroup(parent=groupsKey, name=groupName, ownerId=userObj.userId, registering=True)
-            grpObj.put()
+            group = SantaGroup(parent=groupsKey, name=groupName, ownerId=userObj.userId, registering=True)
+            group.put()
 
             logging.info("Created group " + groupName)
             flash("Created group " + groupName, "success")
 
-        return redirect(url_for('view_group', groupName=groupName))
+        return redirect(url_for('view_group', groupId=group.key.urlsafe()))
 
     return redirect(url_for('admin_list'))
 
-@app.route('/admin/group/<groupName>/close')
-def admin_close_registration(groupName):
-    group = SantaGroup.query(SantaGroup.name==groupName, ancestor=groupsKey).get()
+@app.route('/admin/group/<groupId>/close')
+def admin_close_registration(groupId):
+    group = ndb.Key(urlsafe=groupId).get()
 
     # Error check
     if group is None:
@@ -297,20 +333,20 @@ def admin_close_registration(groupName):
     for reg in SantaRegistration.query(SantaRegistration.group == group.key, ancestor=registrationKey):
         userObj = reg.person.get()
         # Send email
-        message = mail.EmailMessage(sender="The Santabot of Win <santa@secretsantabotwin.appspotmail.com>")
-        message.subject = "Complete Registration for Secret Santa group {groupName}".format(name=userObj.name, groupName=groupName)
+        message = mail.EmailMessage(sender=SANTABOT_SEND_FROM)
+        message.subject = "Complete Registration for Secret Santa group {groupName}".format(name=userObj.name, groupName=group.name)
         message.to = "{name} <{email}>".format(name=userObj.name, email=userObj.email)
-        message.body = render_template('email-complete.txt', name=userObj.name, groupName=groupName, groupPage=url_for('view_group', groupName=groupName, _external=True))
-        message.html = render_template('email-complete.html', name=userObj.name, groupName=groupName, groupPage=url_for('view_group', groupName=groupName, _external=True))
+        message.body = render_template('email-complete.txt', name=userObj.name, groupName=group.name, groupPage=url_for('view_group', groupId=group.key.urlsafe(), _external=True))
+        message.html = render_template('email-complete.html', name=userObj.name, groupName=group.name, groupPage=url_for('view_group', groupId=group.key.urlsafe(), _external=True))
         message.send()
 
     flash("Registration is now complete for {}".format(group.name), "info")
 
     return redirect(url_for('admin_list'))
 
-@app.route('/admin/group/<groupName>/run')
-def admin_run(groupName):
-    group = SantaGroup.query(SantaGroup.name==groupName, ancestor=groupsKey).get()
+@app.route('/admin/group/<groupId>/run')
+def admin_run(groupId):
+    group = ndb.Key(urlsafe=groupId).get()
 
     # Error check
     if group is None:
@@ -388,20 +424,20 @@ def admin_run(groupName):
 
 
 
-        message = mail.EmailMessage(sender="The Santabot of Win <santa@secretsantabotwin.appspotmail.com>")
+        message = mail.EmailMessage(sender=SANTABOT_SEND_FROM)
         message.subject = "Secret Santa Result for {sourceName}".format(sourceName=sourceUser.name)
         message.to = "{sourceName} <{sourceEmail}>".format(sourceName=sourceUser.name, sourceEmail=sourceUser.email)
-        message.body = render_template('email-result.txt', targetName=targetUser.name, sourceName=sourceUser.name, shoppingAdvice=targetReg.shoppingAdvice, ackPage=url_for('view_group', groupName=groupName, _external=True))
-        message.html = render_template('email-result.html', targetName=targetUser.name, sourceName=sourceUser.name, shoppingAdvice=targetReg.shoppingAdvice, ackPage=url_for('view_group', groupName=groupName, _external=True))
+        message.body = render_template('email-result.txt', targetName=targetUser.name, sourceName=sourceUser.name, shoppingAdvice=targetReg.shoppingAdvice, ackPage=url_for('view_group', groupId=group.key.urlsafe(), _external=True))
+        message.html = render_template('email-result.html', targetName=targetUser.name, sourceName=sourceUser.name, shoppingAdvice=targetReg.shoppingAdvice, ackPage=url_for('view_group', groupId=group.key.urlsafe(), _external=True))
         message.send()
 
     flash("Done! Sent %i emails." % len(group.pairs), "success")
     return redirect(url_for('admin_list'))
 
 
-@app.route('/admin/group/<groupName>')
-def admin_list_runs(groupName):
-    groupObj = SantaGroup.query(SantaGroup.name==groupName, ancestor=groupsKey).get()
+@app.route('/admin/group/<groupId>')
+def admin_list_runs(groupId):
+    groupObj = ndb.Key(urlsafe=groupId).get()
     if groupObj is None:
         abort(404)
 
@@ -414,7 +450,13 @@ def admin_list_runs(groupName):
 
 @app.errorhandler(404)
 def error_404(e):
-    userObj = getCurrentUserRecord();
+    userObj = None
+
+    try:
+        userObj = getCurrentUserRecord();
+    except(Unregistered):
+        # Ignore exceptions for the 404.
+        pass
 
     """Return a custom 404 error."""
     return render_template('404.html', users=users, userRecord=userObj)

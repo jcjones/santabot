@@ -12,9 +12,11 @@
 
 {% if group.registering %}
 	{% if not myReg %}
-	<p>You are not currently registered for this group. If you would like to join, <a href="/group/{{group.name}}/join">click here</a>.</p>
+	<p>You are not currently registered for this group. If you would like to join, <a href="/group/{{group.key.urlsafe()}}/join">click here</a>.</p>
+
 	{% else %}
-	<p>Alright! You're all signed up. We're waiting on the rest of the crew to sign up, and then you can fill in your preferences.</p>
+	<p>We're waiting on the rest of the crew to sign up, and then you can fill in your preferences. If you want to remind someone else to join, give them <a href="/group/{{group.key.urlsafe()}}">this link</a>.</p>
+
 		{% if others %}
 	<p>So far, we the following people have signed up:</p>
 	<ol>
@@ -22,6 +24,8 @@
 		<li>{{person.name}}</li>
 			{% endfor %}
 	</ol>
+		{% else %}
+	<p>Currently you're the only person signed up. <i class="fa fa-frown-o"></i></p>
 		{% endif %}
 	{% endif %}
 {% else %}
@@ -135,8 +139,8 @@ $(document).ready(function(){
     		data["unchecked1"] = unchecked[1];
     	}
 
-    	$.post("/group/{{group.name}}/ready", data, function(){
-    		window.location.replace("/group/{{group.name}}");
+    	$.post("/group/{{group.key.urlsafe()}}/ready", data, function(){
+    		window.location.replace("/group/{{group.key.urlsafe()}}");
     	});
 
     });

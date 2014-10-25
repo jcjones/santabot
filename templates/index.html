@@ -17,13 +17,13 @@
     {% if memberGroups %}
     <p>You're a member of:
         <ul>
-    {% for mg in memberGroups %}
-        <li><a href="/group/{{mg.group.name}}"><i class="fa fa-gift"></i> {{mg.group.name}}</a>
-        {% if mg.pair %}
+        {% for mg in memberGroups %}
+        <li><a href="/group/{{mg.group.key.urlsafe()}}"><i class="fa fa-gift"></i> {{mg.group.name}}</a>
+            {% if mg.pair %}
             and have {{mg.pair.target}}
-        {% endif %}
+            {% endif %}
         </li>
-    {% endfor %}
+        {% endfor %}
         </ul>
     </p>
     {% else %}

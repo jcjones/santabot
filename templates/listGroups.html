@@ -18,13 +18,13 @@
 			<ul class="list-inline">
 				
 				{% if ent.group.registering == True %}
-				<li><a href="/group/{{ent.group.name}}">Registration link</a></li>
-				<li><a href="/admin/group/{{ent.group.name}}/close">Close registration</a></li>
+				<li><a href="/group/{{ent.group.key.urlsafe()}}">Registration link</a></li>
+				<li><a href="/admin/group/{{ent.group.key.urlsafe()}}/close">Close registration</a></li>
 				{% elif ent.group.runDate is none %}
-				<li><a href="/admin/group/{{ent.group.name}}/run">Run and send emails</a></li>
+				<li><a href="/admin/group/{{ent.group.key.urlsafe()}}/run">Run and send emails</a></li>
 				{% else %}
 				<li>Ran at {{ent.group.runDate}}</li>
-				<li><a href="/admin/group/{{ent.group.name}}">Reveal secrets</a></li>
+				<li><a href="/admin/group/{{ent.group.key.urlsafe()}}">Reveal secrets</a></li>
 				{% endif %}
 			</ul>
 		</p>
