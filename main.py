@@ -468,13 +468,17 @@ def admin_list_runs(groupId):
 
 @app.route('/admin/cron/daily')
 def admin_cron_daily():
-    for reg in SantaRegistration.query(SantaRegistration.completionDate == None, ancestor=registrationKey):
-        logging.info("reg {} is not completed".format(reg))
-        userObj = reg.person.get()
-        groupObj = reg.group.get()
-        send_mail_close_registration(groupObj=groupObj, userObj=userObj)
+    countReg = 0
+    for group in SantaGroup.query(SantaGroup.registering == False, SantaGroup.runDate == None, ancestor=groupsKey):
+        for reg in SantaRegistration.query(SantaRegistration.group == group.key, SantaRegistration.completionDate == None, ancestor=registrationKey):
+            logging.info("reg {} for {} is not completed".format(group.name, reg.person.get().name))
+            userObj = reg.person.get()
+            groupObj = reg.group.get()            
+            send_mail_close_registration(groupObj=groupObj, userObj=userObj)
 
-    return "OK"
+            countReg = countReg + 1
+
+    return "OK {}".format(countReg)
 
 @app.errorhandler(404)
 def error_404(e):
