@@ -155,7 +155,7 @@ def mainPage():
             for reg in SantaRegistration.query(SantaRegistration.person == userObj.key, ancestor=registrationKey):
                 group = reg.group.get()
                 memberGroups.append({"group":group, "pair":None})
-                logging.warn("Group: %s %s", str(group), reg )
+                logging.debug("Group: %s %s", str(group), reg )
 
         return render_template('index.html', users=users, userRecord=userObj, memberGroups=memberGroups)
     except(Unregistered):
