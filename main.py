@@ -165,7 +165,7 @@ def mainPage():
 def configure_profile():
     try:
         userObj = getCurrentUserRecord()
-        logging.info("UserOBJ is {}".format(userObj))
+        # logging.info("UserOBJ is {}".format(userObj))
         destination = request.args.get('destination', '')
         return render_template('profile.html', users=users, userRecord=userObj, destination=destination)
     except(Unregistered):
@@ -220,9 +220,9 @@ def view_group(groupId):
 
             for pairKey in grpObj.pairs:
                 pair = pairKey.get()
-                logging.info("Checking pair %s", pair)
+                # logging.info("Checking pair %s", pair)
                 if pair.source.get().person == userObj.key:
-                    logging.info("Checking against %s", userObj)
+                    # logging.info("Checking against %s", userObj)
                     target = pair.target.get()
 
         if grpObj.registering:
@@ -288,10 +288,10 @@ def ready_group(groupId):
     # logging.info("oh %s", request.form)
     # logging.info("MSG %s", request.form['message'])
 
-    if "unchecked0" in request.form:
-        logging.info("CHK0 %s", request.form['unchecked0'])
-    if "unchecked1" in request.form:
-        logging.info("CHK1 %s", request.form['unchecked1'])
+    # if "unchecked0" in request.form:
+    #     logging.info("CHK0 %s", request.form['unchecked0'])
+    # if "unchecked1" in request.form:
+    #     logging.info("CHK1 %s", request.form['unchecked1'])
 
     reg = SantaRegistration.query(SantaRegistration.group == grpObj.key, SantaRegistration.person == userObj.key, ancestor=registrationKey).get()
     reg.shoppingAdvice = shoppingAdvice
@@ -324,7 +324,7 @@ def new_group():
 
     groupName = request.form['groupName']
     groupName = groupName.strip(string.whitespace)
-    logging.info("CHK0 %s", groupName)
+    # logging.info("CHK0 %s", groupName)
 
     if len(groupName) < 5:
         flash("The group name is too short.","error")
@@ -413,9 +413,9 @@ def group_run(groupId):
     graphSegments = None
 
     for i in range(2,-1,-1):
-        logging.info("============= %d" % i)
+        # logging.info("============= %d" % i)
         pm.setHonoredProhibited(i)
-        logging.info(pm)
+        # logging.info(pm)
 
         graphSegments = pm.execute()
         if graphSegments:
@@ -473,7 +473,7 @@ def admin_list_runs(groupId):
     regs = SantaRegistration.query(SantaRegistration.group == groupObj.key, ancestor=registrationKey)
 
 
-    logging.info("groupObj Obj: %s", groupObj)
+    # logging.info("groupObj Obj: %s", groupObj)
 
     return render_template('admin-run-details.html', users=users, userRecord=getCurrentUserRecord(), group=groupObj, pairsList=pairs, regsList=regs)
 
@@ -482,7 +482,7 @@ def admin_cron_daily():
     countReg = 0
     for group in SantaGroup.query(SantaGroup.registering == False, SantaGroup.runDate == None, ancestor=groupsKey):
         for reg in SantaRegistration.query(SantaRegistration.group == group.key, SantaRegistration.completionDate == None, ancestor=registrationKey):
-            logging.info("reg {} for {} is not completed".format(group.name, reg.person.get().name))
+            logging.info("DAILY: reg {} for {} is not completed".format(group.name, reg.person.get().name))
             userObj = reg.person.get()
             groupObj = reg.group.get()            
             send_mail_close_registration(groupObj=groupObj, userObj=userObj)
