@@ -13,6 +13,18 @@
     <p class="lead">Hey there.</p>
     <p>You've wrote your list at <code>{{myReg.completionDate}}</code>, so you're done for now. As soon as everyone else has written their lists you'll get an email at {{userRecord.email}} with your giftee and what they want for the holiday.</p>
     <p>Sit tight.</p>
+
+    <p>As of now, these people <em>haven't</em> written their lists:</p>
+    <div class="row">
+      {% for reg in registrants %}
+      {% if not reg.completionDate %}
+      <div class="col-md-6">
+        <h3><img src="{{reg.person.get().getAvatarUrl(size=40)}}" class="img-rounded">
+        {{reg.person.get().name}}</h3>
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
   {% else %}
     <p>Welcome back. We need you to write your list for your Santa. Also, you can specify up to two people as folks whom you do <strong>not</strong> want to be Santa for.</p>
 

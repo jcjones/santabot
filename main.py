@@ -285,8 +285,8 @@ def ready_group(groupId):
         flash("You need to provide some more detailed shopping advice." ,"error")
         return redirect(url_for('view_group', groupId=groupId))
 
-    logging.info("oh %s", request.form)
-    logging.info("MSG %s", request.form['message'])
+    # logging.info("oh %s", request.form)
+    # logging.info("MSG %s", request.form['message'])
 
     if "unchecked0" in request.form:
         logging.info("CHK0 %s", request.form['unchecked0'])
@@ -302,6 +302,14 @@ def ready_group(groupId):
     if "unchecked1" in request.form:
         reg.prohibitedPeople.append(ndb.Key(urlsafe=request.form['unchecked1']))
     reg.put()
+
+    # If this was the last registration, the run is ready
+    qry = SantaRegistration.query(SantaRegistration.group == grpObj.key, SantaRegistration.completionDate == None , ancestor=registrationKey)
+    
+    if not qry.iter().has_next():
+        logging.info("It looks like all registrations are done.")
+
+        group_run(grpObj.key.urlsafe())
 
     return "OK"
 
@@ -367,7 +375,7 @@ def close_registration(groupId):
     return redirect(url_for('view_group', groupId=groupId))
 
 @app.route('/group/<groupId>/run')
-def group_run(groupId):
+def group_run_owner(groupId):
     userObj = getCurrentUserRecord()
     if not userObj:
         return redirect(url_for('mainPage'))
@@ -376,7 +384,11 @@ def group_run(groupId):
 
     if group.ownerId != userObj.userId:
         abort(401)
+    group_run(groupId)
+    return redirect(url_for('view_group', groupId=groupId))
 
+def group_run(groupId):
+    group = ndb.Key(urlsafe=groupId).get()
     # Error check
     if group is None:
         abort(404)
@@ -440,8 +452,7 @@ def group_run(groupId):
 
         send_mail_result(sourceUser=sourceUser, targetUser=targetUser, groupObj=group, targetReg=targetReg)
 
-    flash("Done! Sent %i emails." % len(group.pairs), "success")
-    return redirect(url_for('view_group', groupId=groupId))
+    flash("Done! Sent %i emails." % len(group.pairs), "success")    
 
 
 @app.route('/admin')

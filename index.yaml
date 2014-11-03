@@ -16,6 +16,12 @@ indexes:
   - name: date
     direction: desc
 
+- kind: SantaRegistration
+  ancestor: yes
+  properties:
+  - name: group
+  - name: completionDate
+
 - kind: SantaRun
   properties:
   - name: group

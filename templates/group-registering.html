@@ -6,7 +6,10 @@
 {% include 'group-owner.html' %}
 
 {% if not myReg %}
-<p>You are not currently registered for this group. If you would like to join, <a href="/group/{{group.key.urlsafe()}}/join">click here</a>.</p>
+<p>You are not currently registered for this group.</p>
+
+<p><a href="/group/{{group.key.urlsafe()}}/join"><button type="button" class="btn btn-primary">Join the Group</button></a></p>
+
 
 {% else %}
 <p>We're waiting on the rest of the registered folks to sign up, and then you can fill in your preferences. If you want to remind someone else to join, give them <a href="/group/{{group.key.urlsafe()}}">this link</a>. The group creator can move you to the next phase.</p>
