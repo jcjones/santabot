@@ -226,10 +226,13 @@ def view_group(groupId):
                     target = pair.target.get()
 
         if grpObj.registering:
+            # Registration is open
             template = "group-registering.html"
         elif target:
+            # The run completed, and they are santa for someone
             template = "group-result.html"
         else:
+            # Registration is closed, they need to enter wishlist
             template = "group-complete.html"
 
         return render_template(template, users=users, userRecord=getCurrentUserRecord(), group=grpObj, myReg=myReg, target=target, others=others, members=members, registrants=registrants)
@@ -260,7 +263,10 @@ def join_group(groupId):
         message.body = render_template('email-welcome.txt', name=userObj.name, groupName=grpObj.name, groupPage=url_for('view_group', groupId=groupId, _external=True))
         message.html = render_template('email-welcome.html', name=userObj.name, groupName=grpObj.name, groupPage=url_for('view_group', groupId=groupId, _external=True))
         message.send()
-        logging.info("MESSAGE BODY: " + message.body)
+        logging.debug("MESSAGE BODY: " + message.body)
+
+        logging.info("User {} joined {}".format(userObj.name, grpObj.name))
+
 
         reg.put()
 
@@ -305,6 +311,8 @@ def ready_group(groupId):
 
     # If this was the last registration, the run is ready
     qry = SantaRegistration.query(SantaRegistration.group == grpObj.key, SantaRegistration.completionDate == None , ancestor=registrationKey)
+
+    logging.info("User {} is ready for {} with advice {}".format(userObj.name, grpObj.name, shoppingAdvice))
     
     if not qry.iter().has_next():
         logging.info("It looks like all registrations are done.")
@@ -348,29 +356,31 @@ def close_registration(groupId):
     if not userObj:
         return redirect(url_for('mainPage'))
 
-    group = ndb.Key(urlsafe=groupId).get()
+    groupObj = ndb.Key(urlsafe=groupId).get()
 
-    if group.ownerId != userObj.userId:
+    if groupObj.ownerId != userObj.userId:
         abort(401)    
 
     # Error check
-    if group is None:
+    if groupObj is None:
         abort(404)
 
-    if SantaRegistration.query(SantaRegistration.group == group.key, ancestor=registrationKey).count() < 3:
+    if SantaRegistration.query(SantaRegistration.group == groupObj.key, ancestor=registrationKey).count() < 3:
         flash("You need at least three people to close the group.", "error")
         return redirect(url_for('view_group', groupId=groupId))
 
 
-    group.registering = False
-    group.put()
+    groupObj.registering = False
+    groupObj.put()
 
-    for reg in SantaRegistration.query(SantaRegistration.group == group.key, ancestor=registrationKey):
+    for reg in SantaRegistration.query(SantaRegistration.group == groupObj.key, ancestor=registrationKey):
         userObj = reg.person.get()
         # Send email
-        send_mail_close_registration(userObj=userObj, groupObj=group)
+        send_mail_close_registration(userObj=userObj, groupObj=groupObj)
 
-    flash("Registration is now complete for {}".format(group.name), "info")
+    flash("Registration is now complete for {}".format(groupObj.name), "info")
+    logging.info("User {} closed registration for {}".format(userObj.name, groupObj.name))
+
 
     return redirect(url_for('view_group', groupId=groupId))
 
@@ -380,9 +390,9 @@ def group_run_owner(groupId):
     if not userObj:
         return redirect(url_for('mainPage'))
 
-    group = ndb.Key(urlsafe=groupId).get()
+    groupObj = ndb.Key(urlsafe=groupId).get()
 
-    if group.ownerId != userObj.userId:
+    if groupObj.ownerId != userObj.userId:
         abort(401)
     group_run(groupId)
     return redirect(url_for('view_group', groupId=groupId))
