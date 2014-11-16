@@ -171,7 +171,6 @@ def configure_profile():
     except(Unregistered):
         return createUserProfile(url_for('configure_profile'))
 
-
 @app.route('/profile/update', methods=['POST'])
 def save_profile():
     try:
@@ -186,12 +185,6 @@ def save_profile():
 
     except(Unregistered):
         return createUserProfile(url_for('mainPage'))
-
-@app.route('/test')
-def usefulTestMethod():
-    grpObj = ndb.Key(urlsafe="ahVkZXZ-c2VjcmV0c2FudGFib3R3aW5yKQsSBkdyb3VwcyIGZ3JvdXBzDAsSClNhbnRhR3JvdXAYgICAgIDUvgoM").get()
-    return group_run(grpObj.key.urlsafe())
-
 
 @app.route('/group/<groupId>')
 def view_group(groupId):

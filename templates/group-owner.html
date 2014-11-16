@@ -4,7 +4,7 @@
   {% if group.registering == True %}
   <li><a href="/group/{{group.key.urlsafe()}}/close">Close Registration</a></li>
   {% elif group.runDate is none %}
-  <li><a href="/group/{{group.key.urlsafe()}}/run">Send the Emails</a></li>
+  <li>Nothing to do right now.</li>
   {% else %}
   <li>Ran at {{group.runDate}}</li>
   {% endif %}
