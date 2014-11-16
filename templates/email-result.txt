@@ -6,8 +6,8 @@ You are the Secret Santa for {{targetName}}.
 
 {{shoppingAdvice}}
 
-Please DO NOT LOSE THIS EMAIL. There is NO EASILY ACCESSIBLE RECORD of whom you picked... so, don't forget! 
+If you need to look this up again, just return to the group page at {{groupPage}} .
 
-J.C. doesn't want to have to potentially blow the surprise to himself by having look this up! While the rest of you revel in determining the whole web this wacky algorithm determines, he dwells in the land of magic where ANYTHING CAN HAPPEN. LA LA LA LA (FA LA LA)
+Good luck. On a scale of 0 to 1, I hope your holiday satisfaction equals 1.
 
 - The SantaBot
