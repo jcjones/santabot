@@ -11,7 +11,7 @@
 
   {% if myReg.completionDate  %}
     <p class="lead">Hey there.</p>
-    <p>You've wrote your list at <code>{{myReg.completionDate}}</code>, so you're done for now. As soon as everyone else has written their lists you'll get an email at {{userRecord.email}} with your giftee and what they want for the holiday.</p>
+    <p>You've wrote your list at <code>{{myReg.completionDate}}</code>, so you're done for now. As soon as everyone else has written their lists, you'll get an email at {{userRecord.email}} with the name and wish list of your giftee.</p>
     <p>Sit tight.</p>
 
     <p>As of now, these people <em>haven't</em> written their lists:</p>
@@ -26,14 +26,14 @@
       {% endfor %}
     </div>
   {% else %}
-    <p>Welcome back. We need you to write your list for your Santa. Also, you can specify up to two people as folks whom you do <strong>not</strong> want to be Santa for.</p>
+    <p>Welcome back. We need you to write your list for your Santa. You can also specify up to two people for whom you do <strong>not</strong> want to be Santa.</p>
 
     <div class="form-group" id="messageBlock">
-          <label for="message">Write a message to your Secret Santa about how good you've been and what you want. You should <em>strongly</em> consider pasting in links to a wishlist or things you want.</label>
+          <label for="message">Write a message to your Secret Santa about how good you've been and what you want. If you have a wish list somewhere out there on the internet, you should paste a link to it here. Your Santa will thank you!</label>
       <textarea id="message" class="form-control" rows="3">Message for Santa</textarea>
     </div>
 
-    <label for="prohibited">Who do you want to be Santa for? You may opt out from up to two people. The elves won't tell.</label>
+    <label for="prohibited">Is there anyone in the group for whom you'd really rather not be Santa this year? You may opt out from up to two people. The elves won't tell.</label>
     {% if others %}    
     <div id="prohibited" class="form-group row">
       {% for person in others %}
