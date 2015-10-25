@@ -10,7 +10,7 @@
 {% block content %}
 <p class="lead">Cybersantas are the best Santas.</p>
 
-<p>Santabot lets interested folks join a Secret Santa group, provide feedback as to what they'd like and optionally people they'd rather not be Santa for, and then the Algorithm hands out gift assignments.</p>
+<p>Santabot lets interested folks join a Secret Santa group, provide a wish list, and select people for whom they'd prefer not to be Santa. Then the Algorithm hands out gift assignments.</p>
 
  {% if userRecord %}
     {% if memberGroups %}
@@ -39,7 +39,7 @@
     </div>
 {% else %}
 <p>
-    Anyone can use Santabot, you just need a Google account. If you want to enlist Santabot's help, just <a href="{{users.create_login_url('/')}}">Sign In</a>.
+    Anyone can use Santabot! You just need a Google account. If you want to enlist Santabot's help, just <a href="{{users.create_login_url('/')}}">Sign In</a>.
 </p>
 {% endif %}
 

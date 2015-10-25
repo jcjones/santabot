@@ -1,6 +1,6 @@
 Hello again {{name}},
 
-It's time for you to write your wish list for {{groupName}}, and you can also exclude yourself from a couple of other registrants if you choose.
+It's time for you to write your wish list for {{groupName}}! You also have the opportunity to give SantaBot a couple of hints about whose name he should pick for you.
 
 You need to do this for things to move forward. I'll bug you if you don't do it soon. Don't test me. Click this link: {{groupPage}} .
 
