@@ -1,9 +1,9 @@
-{% extends "base.html" %}
-{% block title %}{{group.name}}{% endblock %}
-{% block pagetitle %}{{group.name}}{% endblock %}
-{% block content %}
+{% extends "broup-base.html" %}
 
-{% include 'group-owner.html' %}
+{% block content %}
+{% block owner %}{{ super() }}{% endblock %}
+{% block advice %}{{ super() }}{% endblock %}
+{{ super() }}
 
 <p>You are the <em>Secret Santa</em> for</p></p>
 
@@ -15,5 +15,4 @@
 </blockquote>
 
 <p>Good luck. On a scale of 0 to 1, I hope your holiday satisfaction equals 1.<p>
-
 {% endblock %}

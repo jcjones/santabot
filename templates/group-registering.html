@@ -1,9 +1,9 @@
-{% extends "base.html" %}
-{% block title %}{{group.name}}{% endblock %}
-{% block pagetitle %}{{group.name}}{% endblock %}
-{% block content %}
+{% extends "group-base.html" %}
 
-{% include 'group-owner.html' %}
+{% block content %}
+{% block owner %}{{ super() }}{% endblock %}
+{% block advice %}{{ super() }}{% endblock %}
+{{ super() }}
 
 {% if not myReg %}
 <p>You are not currently registered for this group.</p>

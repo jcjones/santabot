@@ -1,14 +1,14 @@
-{% extends "base.html" %}
-{% block title %}{{group.name}}{% endblock %}
-{% block pagetitle %}{{group.name}}{% endblock %}
+{% extends "group-base.html" %}
 
 {% block content %}
-
-{% include 'group-owner.html' %}
+{% block owner %}{{ super() }}{% endblock %}
+{{ super() }}
 
 {% if not myReg %}
   <p>I'm sorry, registration for this group is closed.</p>
 {% else %}
+  {% block advice %}{{ super() }}{% endblock %}
+
   {% if myReg.completionDate  %}
     <p class="lead">Hey there.</p>
     <p>You've wrote your list at <code>{{myReg.completionDate}}</code>, so you're done for now. As soon as everyone else has written their lists you'll get an email at {{userRecord.email}} with your giftee and what they want for the holiday.</p>
@@ -63,6 +63,8 @@
 {% endblock %}
 
 {% block scripts %}
+{{ super() }}
+
 <script>
 function countWords(str) {
   return str.split(/\s+/).length;

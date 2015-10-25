@@ -68,6 +68,7 @@ class SantaGroup(ndb.Model):
     createDate = ndb.DateTimeProperty(auto_now_add=True)
     runDate = ndb.DateTimeProperty()
     pairs = ndb.KeyProperty(kind=SantaPairing, repeated=True)
+    advice = ndb.StringProperty()
 
 class SantaRegistration(ndb.Model):
     """ Mapping, registering a Person for a Group """
@@ -228,7 +229,9 @@ def view_group(groupId):
             # Registration is closed, they need to enter wishlist
             template = "group-complete.html"
 
-        return render_template(template, users=users, userRecord=getCurrentUserRecord(), group=grpObj, myReg=myReg, target=target, others=others, members=members, registrants=registrants)
+        return render_template(template, users=users, userRecord=getCurrentUserRecord(),
+            group=grpObj, myReg=myReg, target=target, others=others, members=members,
+            registrants=registrants)
     except(Unregistered):
         return createUserProfile(url_for('view_group', groupId=groupId))
 
@@ -269,6 +272,22 @@ def join_group(groupId):
         return redirect(url_for('view_group', groupId=groupId))
     except(Unregistered):
         return createUserProfile(url_for('join_group', groupId=groupId))
+
+@app.route('/group/<groupId>/advice', methods=['POST'])
+def advice_for_group(groupId):
+    logging.info("oh %s", request.form)
+    groupObj = ndb.Key(urlsafe=groupId).get()
+    if groupObj is None:
+        abort(404)
+    userObj = getCurrentUserRecord()
+    if not userObj:
+        abort(401)
+    if groupObj.ownerId != userObj.userId:
+        abort(401)
+
+    groupObj.advice = request.form['value']
+    groupObj.put()
+    return "Updated"
 
 @app.route('/group/<groupId>/ready', methods=['POST'])
 def ready_group(groupId):

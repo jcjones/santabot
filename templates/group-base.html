@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}{{group.name}}{% endblock %}
+{% block pagetitle %}{{group.name}}{% endblock %}
+
+{% set defaultAdvice = "You should talk to the group owner to find out what the spending limit and exchange date is." %}
+
+{% block owner %}
+ {% if group.ownerId == userRecord.userId %}
+  {% include 'group-owner.html' %}
+ {% endif %}
+{% endblock %}
+
+{% block advice %}
+ {% if group.ownerId == userRecord.userId %}
+  {% set defaultAdvice = "Click here to set advice for your group, such as spending limit, or exchange date." %}
+ {% endif %}
+
+ {% if myReg %}
+<div>
+  <blockquote>
+    <p><a href="#" id="groupAdvice" data-type="textarea" data-pk="{{group.key.urlsafe()}}" data-url="/group/{{group.key.urlsafe()}}/advice" data-title="Advice to your Group (spend limits, party date, etc.)">{{ group.advice | default(defaultAdvice, true) }}</a></p>
+  </blockquote>
+</div>
+ {% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if group.ownerId == userRecord.userId %}
+<script>
+$(document).ready(function(){
+    $('#groupAdvice').editable();
+});
+</script>
+{% endif %}
+{% endblock %}
