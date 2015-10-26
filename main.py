@@ -247,7 +247,7 @@ def view_group(groupId):
             template = "group-complete.html"
 
         return render_template(template, users=users, userRecord=getCurrentUserRecord(),
-            group=grpObj, myReg=myReg, target=target, others=others, members=members,
+            ownerRecord=getUserRecord(grpObj.ownerId), group=grpObj, myReg=myReg, target=target, others=others, members=members,
             registrants=registrants)
     except(Unregistered):
         return createUserProfile(url_for('view_group', groupId=groupId))

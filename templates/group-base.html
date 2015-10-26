@@ -15,10 +15,11 @@
   {% set defaultAdvice = "Click here to set advice for your group, such as spending limit, or exchange date." %}
  {% endif %}
 
- {% if myReg %}
+ {% if myReg or group.registering %}
 <div>
   <blockquote>
     <p><a href="#" id="groupAdvice" data-type="textarea" data-pk="{{group.key.urlsafe()}}" data-url="/group/{{group.key.urlsafe()}}/advice" data-title="Advice to your group (spending limits, party date, etc.)">{{ group.advice | default(defaultAdvice, true) }}</a></p>
+    <footer>{{ownerRecord.name}}</footer>
   </blockquote>
 </div>
  {% endif %}
