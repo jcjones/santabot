@@ -138,8 +138,8 @@ def send_mail_result(sourceUser=None, targetUser=None, groupObj=None, targetReg=
     message = mail.EmailMessage(sender=SANTABOT_SEND_FROM)
     message.subject = "Secret Santa Result for {sourceName}".format(sourceName=sourceUser.name)
     message.to = "{sourceName} <{sourceEmail}>".format(sourceName=sourceUser.name, sourceEmail=sourceUser.email)
-    message.body = render_template('email-result.txt', targetName=targetUser.name, sourceName=sourceUser.name, shoppingAdvice=targetReg.shoppingAdvice, ackPage=url_for('view_group', groupId=groupObj.key.urlsafe(), _external=True))
-    message.html = render_template('email-result.html', targetName=targetUser.name, sourceName=sourceUser.name, shoppingAdvice=targetReg.shoppingAdvice, ackPage=url_for('view_group', groupId=groupObj.key.urlsafe(), _external=True))
+    message.body = render_template('email-result.txt', targetName=targetUser.name, sourceName=sourceUser.name, shoppingAdvice=targetReg.shoppingAdvice, groupName=groupObj.name, groupPage=url_for('view_group', groupId=groupObj.key.urlsafe(), _external=True))
+    message.html = render_template('email-result.html', targetName=targetUser.name, sourceName=sourceUser.name, shoppingAdvice=targetReg.shoppingAdvice, groupName=groupObj.name, groupPage=url_for('view_group', groupId=groupObj.key.urlsafe(), _external=True))
     message.send()
 
 
