@@ -13,26 +13,47 @@
 <p>Santabot lets interested folks join a Secret Santa group, provide a wish list, and select people for whom they'd prefer not to be Santa. Then the Algorithm hands out gift assignments.</p>
 
  {% if userRecord %}
-    {% if memberGroups %}
+    {% if recentGroups %}
     <h2>Your groups</h2>
     <div class="row">
-    {% for mg in memberGroups %}
+        {% for mg in recentGroups %}
         <div class="col-md-4">
-            <h3><a href="/group/{{mg.group.key.urlsafe()}}"><i class="fa fa-gift"></i> {{mg.group.name}}
-            </a></h3>
+            <h3><a href="/group/{{mg.group.key.urlsafe()}}">
+                {% if mg.group.runDate %}<i class="fa fa-check-square-o"></i>
+                {% elif mg.group.registering %}<i class="fa fa-sign-in"></i>
+                {% else %}<i class="fa fa-gift"></i>
+                {% endif %}
+                {{mg.group.name}}</a></h3>
+            <abbr class="timeago" title="{{mg.group.createDate.isoformat()}}Z"/>
         </div>
-    {% endfor %}
+        {% endfor %}
     </div>
-
     {% else %}
     <p>You are not currently part of any groups. You need to ask for an invitation to join a group.</p>
     {% endif %}
+
+    {% if oldGroups %}
+    <div class="row">
+        <h4>Old groups</h4>
+        {% for mg in oldGroups %}
+        <div class="col-md-4">
+            <h4><a href="/group/{{mg.group.key.urlsafe()}}">
+                {% if mg.group.runDate %}<i class="fa fa-check-square-o"></i>
+                {% elif mg.group.registering %}<i class="fa fa-sign-in"></i>
+                {% else %}<i class="fa fa-gift"></i>
+                {% endif %}
+                {{mg.group.name}}</a></h4>
+            <abbr class="timeago" title="{{mg.group.createDate.isoformat()}}Z"/>
+        </div>
+        {% endfor %}
+    {% endif %}
+    </div>
 
     <div class="col-md-12">
     <h2>Start your own group!</h2>
      <form role="form" action="/group/new" method="post" class="form-horizontal">
       <div class="form-group" id="nameBlock">
-        <input type="text" class="form-control" name="groupName" placeholder="New group name, like 2014 Sales Party" id="groupName">
+        <input type="text" class="form-control" name="groupName" placeholder="New group name, like 2015 Sales Party" id="groupName">
       </div>
       <button id="groupNew" type="submit" class="btn btn-default">Submit</button>
      </form>

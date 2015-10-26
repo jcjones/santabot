@@ -5,7 +5,7 @@
   {% elif group.runDate is none %}
   <li>Nothing to do right now.</li>
   {% else %}
-  <li>Ran at {{group.runDate}}</li>
+  <li>Ran <abbr class="timeago" title="{{group.runDate.isoformat()}}Z"></abbr></li>
   {% endif %}
 </ul>
 
@@ -37,8 +37,8 @@
             {{frenemy.get().name}},
             {% endfor %}
           </td>
-          <td>{{reg.createDate}}</td>
-          <td>{{reg.completionDate}}</td>
+          <td><abbr class="timeago" title="{{reg.createDate.isoformat()}}Z"></abbr></td>
+          <td>{% if reg.completionDate %}<abbr class="timeago" title="{{reg.completionDate.isoformat()}}Z"></abbr>{% endif %}</td>
         </tr>
       {% endfor %}
       </table>        

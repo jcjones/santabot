@@ -11,7 +11,7 @@
 
   {% if myReg.completionDate  %}
     <p class="lead">Hey there.</p>
-    <p>You've wrote your list at <code>{{myReg.completionDate}}</code>, so you're done for now. As soon as everyone else has written their lists, you'll get an email at {{userRecord.email}} with the name and wish list of your giftee.</p>
+    <p>You wrote your list <abbr class="timeago" title="{{ myReg.completionDate.isoformat() }}Z"></abbr>, so you're done for now. As soon as everyone else has written their lists, you'll get an email at <tt>{{userRecord.email}}</tt> with the name and wish list of your giftee.</p>
     <p>Sit tight.</p>
 
     <p>As of now, these people <em>haven't</em> written their lists:</p>

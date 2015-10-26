@@ -14,11 +14,14 @@
 	{% for group in groups %}
 	<div class="col-md-12">
 		<h1>{{group.name}}</h1>
-		{{group.ownerId}}
+    {% with owner = userGet(group.ownerId) %}
+    <p>Owner: {{owner.name}} <a href="mailto:{{owner.email}}">&lt;{{owner.email}}&gt;</a></p>
+    {% endwith %}
 		<p>
 			<ul class="list-inline">				
 				<li><a href="/group/{{group.key.urlsafe()}}">View</a></li>
-				<li>Ran at {{group.runDate}}</li>
+        <li>Created <abbr class="timeago" title="{{group.createDate.isoformat()}}Z"></abbr></li>
+				{% if group.runDate %}<li>Ran <abbr class="timeago" title="{{group.runDate.isoformat()}}Z"></abbr></li>{% endif %}
 				<li><a href="/admin/group/{{group.key.urlsafe()}}">Reveal secrets</a></li>
 			</ul>
 		</p>

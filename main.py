@@ -108,6 +108,9 @@ def getCurrentUserRecord():
 
     return record
 
+def getUserRecord(userid):
+    return SantaPerson.query(SantaPerson.userId == userid, ancestor=peopleKey).get()
+
 def createUserProfile(destination):
     user = users.get_current_user()
     if user is None:
@@ -147,18 +150,32 @@ def send_mail_result(sourceUser=None, targetUser=None, groupObj=None, targetReg=
 @app.route('/')
 def mainPage():
     """Return a friendly HTTP greeting."""
+
+    oldAgeCutoff = datetime.datetime.today() - datetime.timedelta(days=180)
+
     try:
         userObj = getCurrentUserRecord()
 
-        memberGroups = []
+        recentGroups = []
+        oldGroups = []
+
         if userObj:
             # Get all santa groups the current user is in
             for reg in SantaRegistration.query(SantaRegistration.person == userObj.key, ancestor=registrationKey):
                 group = reg.group.get()
-                memberGroups.append({"group":group, "pair":None})
+                groupObj = {"group":group, "pair":None}
+
+                if group.createDate < oldAgeCutoff:
+                    oldGroups.append(groupObj)
+                else:
+                    recentGroups.append(groupObj)
+
                 logging.debug("Group: %s %s", str(group), reg )
 
-        return render_template('index.html', users=users, userRecord=userObj, memberGroups=memberGroups)
+        # memberGroups = sorted(memberGroups, reverse=True, key=lambda x: x['group'].createDate)
+
+        return render_template('index.html', users=users, userRecord=userObj,
+            recentGroups=recentGroups, oldGroups=oldGroups)
     except(Unregistered):
         return createUserProfile(url_for('mainPage'))
 
@@ -483,7 +500,7 @@ def admin_list():
 
     groups = SantaGroup.query(ancestor=groupsKey)
 
-    return render_template('admin-list.html', users=users, userRecord=getCurrentUserRecord(), groups=groups)
+    return render_template('admin-list.html', users=users, userGet=getUserRecord, userRecord=getCurrentUserRecord(), groups=groups)
 
 @app.route('/admin/group/<groupId>')
 def admin_list_runs(groupId):

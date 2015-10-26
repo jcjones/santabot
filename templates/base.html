@@ -31,18 +31,19 @@
                 <div class="col-xs-6">
                   <ul class="nav nav-pills pull-right">
                   {% if users.is_current_user_admin() %}
-                    <li><a href="/admin">Admin</b></a></li>
+                    <li><a href="/admin"><h4><i class="fa fa-cog"></i></h4></a></li>
                   {% endif %}
                   {% if users.get_current_user() %}
                     <li class="dropdown">                      
                       <a href="#" class="dropdown-toggle" data-toggle="dropdown">
-                        <img src="{{ userRecord.getAvatarUrl(size=40) }}" class="img-rounded">
+                        <b class="caret"></b>
                         {% if userRecord %}
                         {{ userRecord.name }}
                         {% else %}
                         {{ users.get_current_user().email() }}
                         {% endif %}
-                        <b class="caret"></b></a>
+                        <img src="{{ userRecord.getAvatarUrl(size=40) }}" class="img-rounded">
+                      </a>
                       <ul class="dropdown-menu">
                         <li><a href="/profile">profile</a></li>
                         <li><a href="{{users.create_logout_url('/')}}">sign out</a></li>
@@ -65,7 +66,7 @@
                 {% endblock %}
             </p>
           </div>
-        </div>        
+        </div>
     </div>
 
 
@@ -77,26 +78,24 @@
     <script src="/static/bootstrap-sweetalert/lib/sweet-alert.js"></script>
     <!-- X-editable -->
     <script src="//cdnjs.cloudflare.com/ajax/libs/x-editable/1.5.0/bootstrap3-editable/js/bootstrap-editable.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery-timeago/1.4.1/jquery.timeago.min.js"></script>
 
 
     {% block scripts %}{% endblock %}
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
     <script>
     $(function(){
-        {% for category,message in messages %}
-        window.setTimeout(function(){
-          swal({
-              "type": "{{ category }}",
-              "title": "{{ message }}"
-          });
-        }, 500);
-        {% endfor %}
+      $("abbr.timeago").timeago();
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category,message in messages %}
+      window.setTimeout(function(){
+        swal({
+            "type": "{{ category }}",
+            "title": "{{ message }}"
+        });
+      }, 500);
+      {% endfor %}{% endwith %}
     });
     </script>
-      {% endif %}
-    {% endwith %}
-
 
 </body>
 </html>
