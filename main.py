@@ -51,7 +51,7 @@ class SantaPerson(ndb.Model):
 
     def getAvatarUrl(this, size=80):
         email = this.email.lower()
-        return "http://www.gravatar.com/avatar/" + hashlib.md5(email).hexdigest() + "?s=" + str(size) + "&d=retro"
+        return "https://www.gravatar.com/avatar/" + hashlib.md5(email).hexdigest() + "?s=" + str(size) + "&d=retro"
 
 
 class SantaPairing(ndb.Model):
